@@ -151,7 +151,7 @@ ON CONFLICT (id) DO NOTHING;
 INSERT INTO pratiche (
   id, cliente_id, ciclo, fase, stato,
   assegnato_a, consulente_id,
-  referente_nome, referente_email, referente_telefono,
+  referente_nome, referente_email, referente_tel,
   note, priorita, created_by, updated_by
 ) VALUES (
   'p0000000-0000-0000-0000-000000000001',
@@ -176,7 +176,7 @@ ON CONFLICT (pratica_id, norma_codice) DO NOTHING;
 INSERT INTO pratiche (
   id, cliente_id, ciclo, fase, stato,
   assegnato_a, consulente_id,
-  referente_nome, referente_email, referente_telefono,
+  referente_nome, referente_email, referente_tel,
   data_verifica, auditor_id, sede_verifica,
   note, priorita, created_by, updated_by
 ) VALUES (
@@ -207,7 +207,7 @@ ON CONFLICT (pratica_id, norma_codice) DO NOTHING;
 INSERT INTO pratiche (
   id, cliente_id, ciclo, fase, stato,
   assegnato_a,
-  referente_nome, referente_email, referente_telefono,
+  referente_nome, referente_email, referente_tel,
   data_verifica, auditor_id, sede_verifica,
   proforma_richiesta, proforma_emessa, proforma_emessa_at,
   documenti_ricevuti,
