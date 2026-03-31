@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -6,6 +6,7 @@ import { z } from 'zod'
 import { Loader2, Shield } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { APP_CONFIG } from '@/config/app.config'
+import { useAuth } from '@/hooks/useAuth'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -13,14 +14,10 @@ import { cn } from '@/lib/utils'
 
 // ── Schema di validazione ────────────────────────────────────────
 
+// Zod v4: z.email() sostituisce z.string().email() (deprecated)
 const loginSchema = z.object({
-  email: z
-    .string()
-    .min(1, 'Email obbligatoria')
-    .email('Inserisci un indirizzo email valido'),
-  password: z
-    .string()
-    .min(1, 'Password obbligatoria'),
+  email: z.email('Inserisci un indirizzo email valido'),
+  password: z.string().min(1, 'Password obbligatoria'),
 })
 
 type LoginFormData = z.infer<typeof loginSchema>
@@ -47,7 +44,16 @@ function mapErroreLogin(message: string): string {
 
 export default function LoginPage() {
   const navigate = useNavigate()
+  const { user } = useAuth()
   const [errorLogin, setErrorLogin] = useState<string | null>(null)
+
+  // Fix race condition: naviga quando user viene impostato da AuthProvider.
+  // Gestisce anche il redirect automatico se l'utente è già autenticato.
+  useEffect(() => {
+    if (user) {
+      navigate('/dashboard', { replace: true })
+    }
+  }, [user, navigate])
 
   const {
     register,
@@ -67,10 +73,8 @@ export default function LoginPage() {
 
     if (error) {
       setErrorLogin(mapErroreLogin(error.message))
-      return
     }
-
-    navigate('/dashboard', { replace: true })
+    // Navigazione gestita da useEffect quando AuthProvider aggiorna user
   }
 
   return (
