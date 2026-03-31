@@ -1,0 +1,2 @@
+// Consulenti components: ConsulenteModal
+export {}

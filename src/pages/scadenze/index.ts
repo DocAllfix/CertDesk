@@ -1,0 +1,2 @@
+// Scadenze pages: ScadenzePage
+export {}

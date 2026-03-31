@@ -1,0 +1,2 @@
+// Consulenti pages: ConsulentiPage
+export {}
