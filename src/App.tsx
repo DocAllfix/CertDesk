@@ -9,6 +9,7 @@ import ClientiPage from '@/pages/database/ClientiPage'
 import ConsulentiPage from '@/pages/database/ConsulentiPage'
 import PratichePage from '@/pages/pratiche/PratichePage'
 import PraticaDettaglioPage from '@/pages/pratiche/PraticaDettaglioPage'
+import PipelinePage from '@/pages/pipeline/PipelinePage'
 
 // ── QueryClient ──────────────────────────────────────────────────
 
@@ -77,7 +78,7 @@ export default function App() {
                 <Route path="dashboard" element={<Placeholder name="DashboardPage" />} />
                 <Route path="pratiche" element={<PratichePage />} />
                 <Route path="pratiche/:id" element={<PraticaDettaglioPage />} />
-                <Route path="pipeline" element={<Placeholder name="PipelinePage (Kanban)" />} />
+                <Route path="pipeline" element={<PipelinePage />} />
                 <Route path="scadenze" element={<Placeholder name="ScadenzePage" />} />
 
                 {/* Database */}

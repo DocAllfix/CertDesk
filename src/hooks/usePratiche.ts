@@ -12,13 +12,13 @@ import {
   getPratica,
   createPratica,
   updatePratica,
-  avanzaFase,
   sospendPratica,
   annullaPratica,
   type CreatePraticaData,
   type UpdatePratica,
 } from '@/lib/queries/pratiche'
-import type { FiltriPratiche, FaseType } from '@/types/app.types'
+import { executeAvanzaFase } from '@/lib/workflow'
+import type { FiltriPratiche, FaseType, UserProfile } from '@/types/app.types'
 
 // ── Query Keys ───────────────────────────────────────────────────
 
@@ -80,15 +80,26 @@ export function useAvanzaFase() {
   return useMutation({
     mutationFn: ({
       id,
+      oldFase,
       nuovaFase,
       userId,
+      allUsers,
       motivo,
     }: {
       id: string
+      oldFase: FaseType
       nuovaFase: FaseType
       userId: string
+      allUsers: Pick<UserProfile, 'id' | 'ruolo'>[]
       motivo?: string
-    }) => avanzaFase(id, nuovaFase, userId, motivo),
+    }) => executeAvanzaFase({
+      praticaId: id,
+      oldFase,
+      nuovaFase,
+      userId,
+      allUsers,
+      motivo,
+    }),
     onSuccess: (updated) => {
       // Cambio fase impatta pipeline, scadenze, dashboard → invalida tutta la cache pratiche
       qc.invalidateQueries({ queryKey: praticheKeys.all })
