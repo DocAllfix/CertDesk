@@ -1,0 +1,86 @@
+/**
+ * Query layer Supabase per la tabella consulenti.
+ * Tutte le funzioni lanciano un Error con messaggio in italiano in caso di errore.
+ */
+import { supabase } from '@/lib/supabase'
+import type { Inserts, Updates } from '@/lib/supabase'
+
+export type InsertConsulente = Inserts<'consulenti'>
+export type UpdateConsulente = Updates<'consulenti'>
+
+// ── Lettura ─────────────────────────────────────────────────────
+
+/**
+ * Restituisce tutti i consulenti attivi.
+ * Se `search` è fornito, filtra per nome, cognome o azienda (case-insensitive).
+ */
+export async function getConsulenti(search?: string) {
+  let query = supabase
+    .from('consulenti')
+    .select('*')
+    .eq('attivo', true)
+    .order('nome', { ascending: true })
+
+  if (search && search.trim() !== '') {
+    const term = search.trim()
+    query = query.or(`nome.ilike.%${term}%,cognome.ilike.%${term}%,azienda.ilike.%${term}%`)
+  }
+
+  const { data, error } = await query
+
+  if (error) throw new Error(`Errore nel caricamento dei consulenti: ${error.message}`)
+  return data
+}
+
+/**
+ * Restituisce un singolo consulente per ID.
+ * Lancia un errore se non trovato.
+ */
+export async function getConsulente(id: string) {
+  const { data, error } = await supabase
+    .from('consulenti')
+    .select('*')
+    .eq('id', id)
+    .single()
+
+  if (error) throw new Error(`Errore nel caricamento del consulente: ${error.message}`)
+  if (!data) throw new Error('Consulente non trovato')
+  return data
+}
+
+// ── Scrittura ────────────────────────────────────────────────────
+
+export async function createConsulente(data: InsertConsulente) {
+  const { data: created, error } = await supabase
+    .from('consulenti')
+    .insert(data)
+    .select()
+    .single()
+
+  if (error) throw new Error(`Errore nella creazione del consulente: ${error.message}`)
+  if (!created) throw new Error('Creazione consulente fallita: nessun dato restituito')
+  return created
+}
+
+export async function updateConsulente(id: string, data: UpdateConsulente) {
+  const { data: updated, error } = await supabase
+    .from('consulenti')
+    .update(data)
+    .eq('id', id)
+    .select()
+    .single()
+
+  if (error) throw new Error(`Errore nell'aggiornamento del consulente: ${error.message}`)
+  if (!updated) throw new Error('Aggiornamento consulente fallito: nessun dato restituito')
+  return updated
+}
+
+/** Soft delete: imposta attivo = false invece di eliminare il record */
+export async function softDeleteConsulente(id: string) {
+  const { error } = await supabase
+    .from('consulenti')
+    .update({ attivo: false })
+    .eq('id', id)
+
+  if (error) throw new Error(`Errore nell'archiviazione del consulente: ${error.message}`)
+}
