@@ -7,6 +7,8 @@ import { useAuth } from '@/hooks/useAuth'
 import LoginPage from '@/pages/auth/LoginPage'
 import ClientiPage from '@/pages/database/ClientiPage'
 import ConsulentiPage from '@/pages/database/ConsulentiPage'
+import PratichePage from '@/pages/pratiche/PratichePage'
+import PraticaDettaglioPage from '@/pages/pratiche/PraticaDettaglioPage'
 
 // ── QueryClient ──────────────────────────────────────────────────
 
@@ -73,8 +75,8 @@ export default function App() {
 
                 {/* Pagine principali */}
                 <Route path="dashboard" element={<Placeholder name="DashboardPage" />} />
-                <Route path="pratiche" element={<Placeholder name="PratichePage" />} />
-                <Route path="pratiche/:id" element={<Placeholder name="PraticaDettaglioPage" />} />
+                <Route path="pratiche" element={<PratichePage />} />
+                <Route path="pratiche/:id" element={<PraticaDettaglioPage />} />
                 <Route path="pipeline" element={<Placeholder name="PipelinePage (Kanban)" />} />
                 <Route path="scadenze" element={<Placeholder name="ScadenzePage" />} />
 

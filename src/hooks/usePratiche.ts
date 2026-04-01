@@ -13,6 +13,8 @@ import {
   createPratica,
   updatePratica,
   avanzaFase,
+  sospendPratica,
+  annullaPratica,
   type CreatePraticaData,
   type UpdatePratica,
 } from '@/lib/queries/pratiche'
@@ -92,6 +94,28 @@ export function useAvanzaFase() {
       qc.invalidateQueries({ queryKey: praticheKeys.all })
       // Aggiorna subito il dettaglio per evitare flash di dati vecchi
       qc.setQueryData(praticheKeys.detail(updated.id), updated)
+    },
+  })
+}
+
+export function useSospendiPratica() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, motivo }: { id: string; motivo?: string }) =>
+      sospendPratica(id, motivo),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: praticheKeys.all })
+    },
+  })
+}
+
+export function useAnnullaPratica() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, motivo }: { id: string; motivo: string }) =>
+      annullaPratica(id, motivo),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: praticheKeys.all })
     },
   })
 }

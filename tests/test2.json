@@ -1,0 +1,1 @@
+{"query": "INSERT INTO pratiche_norme (pratica_id, norma_codice) VALUES ('f1400000-0000-0000-0000-000000000001', 'ISO 99999');"}

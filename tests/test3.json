@@ -1,0 +1,1 @@
+{"query": "UPDATE pratiche SET fase = 'completata' WHERE id = 'f1400000-0000-0000-0000-000000000001';"}

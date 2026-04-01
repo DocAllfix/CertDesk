@@ -1,0 +1,1 @@
+{"query": "SELECT id, numero_pratica, fase FROM pratiche WHERE id = 'f1400000-0000-0000-0000-000000000002'; UPDATE pratiche SET fase = 'programmazione_verifica' WHERE id = 'f1400000-0000-0000-0000-000000000002'; SELECT id, numero_pratica, fase FROM pratiche WHERE id = 'f1400000-0000-0000-0000-000000000002';"}

@@ -1,0 +1,1 @@
+{"query": "UPDATE pratiche SET fase = 'programmazione_verifica' WHERE id = 'f1400000-0000-0000-0000-000000000001'; UPDATE pratiche SET fase = 'richiesta_proforma' WHERE id = 'f1400000-0000-0000-0000-000000000001';"}
