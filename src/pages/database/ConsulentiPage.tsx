@@ -6,8 +6,7 @@ import { useState } from 'react'
 import { Plus, Mail, Shield } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { TooltipProvider } from '@/components/ui/tooltip'
-import { useConsulenti, useConsulentiNorme } from '@/hooks/useConsulenti'
-import { useAuth } from '@/hooks/useAuth'
+import { useConsulenti } from '@/hooks/useConsulenti'
 import { ConsulenteModal } from '@/components/consulenti/ConsulenteModal'
 import type { Consulente } from '@/types/app.types'
 
@@ -19,13 +18,16 @@ function getInitials(nome: string, cognome: string | null): string {
 
 // ── ConsulenteCard ───────────────────────────────────────────────
 
+// Tipo che include le norme embedded dal JOIN in getConsulenti
+type ConsulenteConNorme = Consulente & { consulenti_norme: { norma_codice: string }[] }
+
 interface ConsulenteCardProps {
-  consulente: Consulente
+  consulente: ConsulenteConNorme
   onClick: () => void
 }
 
 function ConsulenteCard({ consulente, onClick }: ConsulenteCardProps) {
-  const { data: norme = [] } = useConsulentiNorme(consulente.id)
+  const norme    = (consulente.consulenti_norme ?? []).map((r) => r.norma_codice)
   const initials = getInitials(consulente.nome, consulente.cognome)
   const visibili  = norme.slice(0, 3)
   const extra     = norme.length - visibili.length
@@ -89,7 +91,6 @@ export default function ConsulentiPage() {
   const [modalOpen, setModalOpen]               = useState(false)
   const [selectedConsulente, setSelected]       = useState<Consulente | null>(null)
 
-  const { isResponsabile }                      = useAuth()
   const { data: consulenti, isLoading, error }  = useConsulenti()
 
   const openCreate = () => { setSelected(null); setModalOpen(true) }
@@ -102,15 +103,13 @@ export default function ConsulentiPage() {
 
         {/* Toolbar */}
         <div className="flex justify-end">
-          {isResponsabile && (
-            <Button
-              className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-sm"
-              onClick={openCreate}
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              Aggiungi Consulente
-            </Button>
-          )}
+          <Button
+            className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-sm"
+            onClick={openCreate}
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            Aggiungi Consulente
+          </Button>
         </div>
 
         {/* Loading */}
@@ -132,7 +131,7 @@ export default function ConsulentiPage() {
         {/* Grid card */}
         {!isLoading && !error && consulenti && consulenti.length > 0 && (
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
-            {consulenti.map((c) => (
+            {(consulenti as ConsulenteConNorme[]).map((c) => (
               <ConsulenteCard key={c.id} consulente={c} onClick={() => openEdit(c)} />
             ))}
           </div>

@@ -26,6 +26,9 @@ export default function ClientiPage() {
   }
 
   const handleOpenEdit = (cliente: Cliente) => {
+    // Operatori possono aprire il modal solo in lettura (nessun pulsante modifica visibile)
+    // Il DB protegge comunque via RLS, ma evitiamo UX confusa
+    if (!isResponsabile) return
     setSelectedCliente(cliente)
     setModalOpen(true)
   }

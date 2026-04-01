@@ -91,7 +91,10 @@ export function useSetConsulentiNorme() {
     mutationFn: ({ consulenteId, norme }: { consulenteId: string; norme: string[] }) =>
       setConsulentiNorme(consulenteId, norme),
     onSuccess: (_data, { consulenteId }) => {
+      // Invalida sia la cache norme isolata (usata dal modal)
+      // sia la lista consulenti con JOIN embedded (usata dalle card)
       qc.invalidateQueries({ queryKey: ['consulenti_norme', consulenteId] })
+      qc.invalidateQueries({ queryKey: consulentiKeys.all })
     },
   })
 }

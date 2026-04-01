@@ -17,7 +17,7 @@ export type UpdateConsulente = Updates<'consulenti'>
 export async function getConsulenti(search?: string) {
   let query = supabase
     .from('consulenti')
-    .select('*')
+    .select('*, consulenti_norme(norma_codice)')
     .eq('attivo', true)
     .order('nome', { ascending: true })
 
