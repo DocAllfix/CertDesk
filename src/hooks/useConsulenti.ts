@@ -8,6 +8,8 @@ import {
   createConsulente,
   updateConsulente,
   softDeleteConsulente,
+  getConsulentiNorme,
+  setConsulentiNorme,
   type InsertConsulente,
   type UpdateConsulente,
 } from '@/lib/queries/consulenti'
@@ -69,6 +71,27 @@ export function useDeleteConsulente() {
     mutationFn: (id: string) => softDeleteConsulente(id),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: consulentiKeys.all })
+    },
+  })
+}
+
+// ── Norme ────────────────────────────────────────────────────────
+
+export function useConsulentiNorme(consulenteId: string | undefined) {
+  return useQuery({
+    queryKey: ['consulenti_norme', consulenteId ?? ''],
+    queryFn:  () => getConsulentiNorme(consulenteId!),
+    enabled:  !!consulenteId,
+  })
+}
+
+export function useSetConsulentiNorme() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ consulenteId, norme }: { consulenteId: string; norme: string[] }) =>
+      setConsulentiNorme(consulenteId, norme),
+    onSuccess: (_data, { consulenteId }) => {
+      qc.invalidateQueries({ queryKey: ['consulenti_norme', consulenteId] })
     },
   })
 }

@@ -6,6 +6,7 @@ import { AppLayout } from '@/components/layout/AppLayout'
 import { useAuth } from '@/hooks/useAuth'
 import LoginPage from '@/pages/auth/LoginPage'
 import ClientiPage from '@/pages/database/ClientiPage'
+import ConsulentiPage from '@/pages/database/ConsulentiPage'
 
 // ── QueryClient ──────────────────────────────────────────────────
 
@@ -79,7 +80,7 @@ export default function App() {
 
                 {/* Database */}
                 <Route path="database/clienti" element={<ClientiPage />} />
-                <Route path="database/consulenti" element={<Placeholder name="ConsulentiPage" />} />
+                <Route path="database/consulenti" element={<ConsulentiPage />} />
                 <Route path="database/archivio" element={<Placeholder name="ArchivioPratiche" />} />
                 <Route path="promemoria" element={<Placeholder name="PromemoriaPage" />} />
 

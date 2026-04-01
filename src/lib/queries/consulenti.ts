@@ -84,3 +84,36 @@ export async function softDeleteConsulente(id: string) {
 
   if (error) throw new Error(`Errore nell'archiviazione del consulente: ${error.message}`)
 }
+
+// ── Norme ────────────────────────────────────────────────────────
+
+/** Restituisce i codici norme associati a un consulente */
+export async function getConsulentiNorme(consulenteId: string): Promise<string[]> {
+  const { data, error } = await supabase
+    .from('consulenti_norme')
+    .select('norma_codice')
+    .eq('consulente_id', consulenteId)
+
+  if (error) throw new Error(`Errore nel caricamento delle norme del consulente: ${error.message}`)
+  return (data ?? []).map((r) => r.norma_codice)
+}
+
+/**
+ * Sostituisce le norme di un consulente (delete + insert).
+ * Non è atomico, ma accettabile per questo use case.
+ */
+export async function setConsulentiNorme(consulenteId: string, norme: string[]): Promise<void> {
+  const { error: delError } = await supabase
+    .from('consulenti_norme')
+    .delete()
+    .eq('consulente_id', consulenteId)
+
+  if (delError) throw new Error(`Errore nella rimozione delle norme: ${delError.message}`)
+
+  if (norme.length === 0) return
+
+  const rows = norme.map((norma_codice) => ({ consulente_id: consulenteId, norma_codice }))
+  const { error: insError } = await supabase.from('consulenti_norme').insert(rows)
+
+  if (insError) throw new Error(`Errore nel salvataggio delle norme: ${insError.message}`)
+}
