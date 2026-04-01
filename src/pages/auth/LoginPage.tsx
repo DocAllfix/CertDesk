@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { Loader2, Shield } from 'lucide-react'
+import { Loader2 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { APP_CONFIG } from '@/config/app.config'
 import { useAuth } from '@/hooks/useAuth'
@@ -94,8 +94,8 @@ export default function LoginPage() {
 
           {/* Header — Logo + titolo */}
           <div className="flex flex-col items-center gap-3">
-            <div className="flex items-center justify-center size-14 rounded-2xl bg-primary/10 border border-primary/20">
-              <Shield className="size-7 text-primary" strokeWidth={1.5} />
+            <div className="flex items-center justify-center size-14 rounded-2xl bg-[#f7f3e8] border border-border overflow-hidden">
+              <img src={APP_CONFIG.logoUrl} alt={APP_CONFIG.name} className="size-10 object-contain" />
             </div>
             <div className="text-center">
               <h1 className="text-2xl font-bold tracking-tight text-foreground">

@@ -1,43 +1,38 @@
-import { useLocation, useParams, Link } from 'react-router-dom'
-import { Search, Bell, ChevronRight } from 'lucide-react'
-import { cn } from '@/lib/utils'
+/**
+ * Header — barra superiore: titolo pagina, ricerca, tema, notifiche, avatar.
+ * Ref: ../evalisdesk-ref/src/components/layout/Header.jsx
+ *
+ * h-12 · bg-card · border-b · sticky top-0 z-30
+ */
+import { useLocation } from 'react-router-dom'
+import { Search, Bell, Sun, Moon } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { useAuth } from '@/hooks/useAuth'
+import { useTheme } from '@/hooks/useTheme'
 
-// ── Mappa percorsi → etichette breadcrumb ────────────────────────
+// ── Mappa path → titolo pagina ───────────────────────────────────────
 
-const ROUTE_LABELS: Record<string, string> = {
-  '/dashboard': 'Dashboard',
-  '/pratiche': 'Pratiche',
-  '/pipeline': 'Pipeline',
-  '/scadenze': 'Scadenze',
-  '/database/clienti': 'Clienti',
-  '/database/consulenti': 'Consulenti',
-  '/database/archivio': 'Archivio Pratiche',
-  '/promemoria': 'Promemoria',
+const PAGE_TITLES: Record<string, string> = {
+  '/dashboard':            'Dashboard',
+  '/pratiche':             'Pratiche',
+  '/pipeline':             'Pipeline',
+  '/scadenze':             'Scadenze',
+  '/database/clienti':     'Clienti',
+  '/database/consulenti':  'Consulenti',
+  '/database/archivio':    'Archivio',
+  '/promemoria':           'Promemoria',
 }
 
-interface Crumb {
-  label: string
-  path?: string
+function getPageTitle(pathname: string): string {
+  // Match esatto
+  if (PAGE_TITLES[pathname]) return PAGE_TITLES[pathname]
+  // Pratica dettaglio: /pratiche/:id
+  if (pathname.startsWith('/pratiche/')) return 'Dettaglio Pratica'
+  return 'CertDesk'
 }
 
-function buildBreadcrumbs(pathname: string, praticaId?: string): Crumb[] {
-  if (pathname.startsWith('/database/')) {
-    const sub = ROUTE_LABELS[pathname] ?? 'Database'
-    return [{ label: 'Database' }, { label: sub }]
-  }
-
-  if (pathname.startsWith('/pratiche/') && praticaId) {
-    return [
-      { label: 'Pratiche', path: '/pratiche' },
-      { label: `Pratica ${praticaId}` },
-    ]
-  }
-
-  return [{ label: ROUTE_LABELS[pathname] ?? 'CertDesk' }]
-}
-
-// ── Avatar mini in header ─────────────────────────────────────────
+// ── MiniAvatar ───────────────────────────────────────────────────────
 
 interface MiniAvatarProps {
   nome: string
@@ -47,107 +42,98 @@ interface MiniAvatarProps {
 
 function MiniAvatar({ nome, cognome, avatarUrl }: MiniAvatarProps) {
   const initials = `${nome.charAt(0)}${cognome?.charAt(0) ?? ''}`.toUpperCase()
-
   if (avatarUrl) {
     return (
       <img
         src={avatarUrl}
         alt={nome}
-        className="size-7 rounded-full object-cover flex-shrink-0"
+        className="w-8 h-8 rounded-full object-cover cursor-pointer hover:opacity-90 transition-opacity"
       />
     )
   }
-
   return (
-    <div className="flex size-7 items-center justify-center rounded-full bg-primary/20 text-primary text-xs font-semibold flex-shrink-0">
-      {initials}
+    <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center cursor-pointer hover:opacity-90 transition-opacity">
+      <span className="text-primary-foreground text-xs font-bold">{initials}</span>
     </div>
   )
 }
 
-// ── Header ────────────────────────────────────────────────────────
+// ── Header ───────────────────────────────────────────────────────────
 
-// Placeholder contatore notifiche — verrà collegato in F6.2
-const NOTIFICHE_NON_LETTE = 0
+interface HeaderProps {
+  onOpenNotifications: () => void
+  /** Conteggio notifiche non lette — placeholder F6.2 */
+  unreadCount?: number
+}
 
-export function Header() {
-  const location = useLocation()
-  const { id: praticaId } = useParams<{ id: string }>()
+export function Header({ onOpenNotifications, unreadCount = 0 }: HeaderProps) {
+  const location  = useLocation()
   const { userProfile } = useAuth()
+  const { isDark, toggleTheme } = useTheme()
 
-  const crumbs = buildBreadcrumbs(location.pathname, praticaId)
+  const title = getPageTitle(location.pathname)
 
   return (
-    <header className="flex h-14 flex-shrink-0 items-center gap-4 border-b border-border bg-card px-6">
+    <header className="h-12 bg-card border-b border-border flex items-center justify-between px-5 shrink-0 sticky top-0 z-30">
 
-      {/* ── Breadcrumb ────────────────────────────────────────────── */}
-      <nav className="flex flex-1 items-center gap-1.5 min-w-0">
-        {crumbs.map((crumb, i) => (
-          <div key={i} className="flex items-center gap-1.5 min-w-0">
-            {i > 0 && (
-              <ChevronRight className="size-3.5 text-muted-foreground/50 flex-shrink-0" />
-            )}
-            {crumb.path ? (
-              <Link
-                to={crumb.path}
-                className="text-sm text-muted-foreground hover:text-foreground transition-colors truncate"
-              >
-                {crumb.label}
-              </Link>
-            ) : (
-              <span
-                className={cn(
-                  'text-sm truncate',
-                  i === crumbs.length - 1
-                    ? 'font-semibold text-foreground'
-                    : 'text-muted-foreground'
-                )}
-              >
-                {crumb.label}
-              </span>
-            )}
-          </div>
-        ))}
-      </nav>
-
-      {/* ── Ricerca globale (UI placeholder) ─────────────────────── */}
-      <div className="flex items-center gap-2 rounded-lg border border-border bg-background px-3 py-1.5 w-64">
-        <Search className="size-3.5 text-muted-foreground flex-shrink-0" />
-        <input
-          type="text"
-          placeholder="Cerca pratiche, clienti..."
-          className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground outline-none"
-          readOnly
-          title="Ricerca globale — disponibile nelle prossime versioni"
-        />
-        <kbd className="hidden text-[10px] text-muted-foreground/50 sm:inline-flex items-center gap-1 rounded border border-border px-1.5 py-0.5">
-          ⌘K
-        </kbd>
+      {/* ── Titolo ───────────────────────────────────────────── */}
+      <div className="flex items-center gap-3">
+        <h1 className="text-2xl font-poppins font-medium text-foreground leading-[34px]">
+          {title}
+        </h1>
       </div>
 
-      {/* ── Notifiche ─────────────────────────────────────────────── */}
-      <button
-        className="relative flex size-8 items-center justify-center rounded-lg text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
-        title="Notifiche"
-      >
-        <Bell className="size-4" strokeWidth={1.5} />
-        {NOTIFICHE_NON_LETTE > 0 && (
-          <span className="absolute right-1 top-1 flex size-4 items-center justify-center rounded-full bg-destructive text-[10px] font-bold text-white">
-            {NOTIFICHE_NON_LETTE > 9 ? '9+' : NOTIFICHE_NON_LETTE}
-          </span>
-        )}
-      </button>
+      {/* ── Azioni destra ────────────────────────────────────── */}
+      <div className="flex items-center gap-2">
 
-      {/* ── Avatar utente ────────────────────────────────────────── */}
-      {userProfile && (
-        <div className="flex items-center gap-2">
+        {/* Ricerca (non funzionale fino a F9) */}
+        <div className="relative hidden md:block">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+          <Input
+            placeholder="Cerca pratica, cliente..."
+            className="w-52 pl-8 h-8 bg-muted/40 border-border/60 text-sm focus:border-primary/40 focus:bg-card transition-colors"
+            readOnly
+          />
+        </div>
+
+        {/* Theme toggle */}
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={toggleTheme}
+          title={isDark ? 'Passa al tema chiaro' : 'Passa al tema scuro'}
+          className="w-8 h-8 text-muted-foreground hover:text-foreground"
+        >
+          {isDark
+            ? <Sun  className="w-4 h-4" />
+            : <Moon className="w-4 h-4" />
+          }
+        </Button>
+
+        {/* Notifiche */}
+        <Button
+          variant="ghost"
+          size="icon"
+          className="relative w-8 h-8 text-muted-foreground hover:text-foreground"
+          onClick={onOpenNotifications}
+        >
+          <Bell className="w-4 h-4" />
+          {unreadCount > 0 && (
+            <span className="absolute top-0.5 right-0.5 w-4 h-4 bg-destructive text-white text-[9px] font-bold rounded-full flex items-center justify-center">
+              {unreadCount > 9 ? '9+' : unreadCount}
+            </span>
+          )}
+        </Button>
+
+        {/* Avatar */}
+        {userProfile && (
           <MiniAvatar
             nome={userProfile.nome}
             cognome={userProfile.cognome}
             avatarUrl={userProfile.avatar_url}
           />
-        </div>
-      )}
+        )}
+      </div>
     </header>
   )
 }

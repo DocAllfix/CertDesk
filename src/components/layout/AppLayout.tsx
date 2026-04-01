@@ -1,38 +1,56 @@
-import { Outlet } from 'react-router-dom'
-import { Sidebar } from './Sidebar'
-import { Header } from './Header'
-
 /**
  * AppLayout — wrapper principale dell'app autenticata.
+ * Ref: ../evalisdesk-ref/src/components/layout/AppLayout.jsx
  *
  * Struttura:
- *   ┌────────────────────────────────────────┐
- *   │  Sidebar (240px, fixed height)         │
- *   │  ┌──────────────────────────────────┐  │
- *   │  │  Header (56px, top bar)          │  │
- *   │  ├──────────────────────────────────┤  │
- *   │  │  <Outlet /> (contenuto pagina)   │  │
- *   │  └──────────────────────────────────┘  │
- *   └────────────────────────────────────────┘
- *
- * Nota: Header usa useParams() — funziona perché AppLayout è
- * renderizzato come route element, quindi il context delle route
- * figle è già disponibile tramite Outlet.
+ *   Sidebar (fixed left-0, w-255px o w-56px)
+ *   Main content (pl dinamico basato su collapsed)
+ *     Header (sticky top-0)
+ *     <Outlet />
+ *   NotifichePanel (slide-over da destra, z-50)
  */
+import { useState } from 'react'
+import { Outlet } from 'react-router-dom'
+import { Sidebar }        from './Sidebar'
+import { Header }         from './Header'
+import { NotifichePanel } from './NotifichePanel'
+
 export function AppLayout() {
+  const [collapsed,          setCollapsed]          = useState(false)
+  const [notificationsOpen,  setNotificationsOpen]  = useState(false)
+
+  const handleToggle             = () => setCollapsed(p => !p)
+  const handleOpenNotifications  = () => setNotificationsOpen(true)
+  const handleCloseNotifications = () => setNotificationsOpen(false)
+
   return (
-    <div className="flex h-screen overflow-hidden bg-background">
-      <Sidebar />
+    <div className="min-h-screen bg-background flex">
 
-      <div className="flex flex-1 flex-col overflow-hidden">
-        <Header />
+      <Sidebar
+        collapsed={collapsed}
+        onToggle={handleToggle}
+        onOpenNotifications={handleOpenNotifications}
+      />
 
-        <main className="flex-1 overflow-y-auto">
-          <div className="min-h-full p-6">
-            <Outlet />
-          </div>
+      {/* Main content — offset dinamico in base al collapsed */}
+      <div
+        className="flex flex-col min-h-screen transition-all duration-300"
+        style={{
+          paddingLeft: collapsed ? '56px' : '255px',
+          width: '100%',
+        }}
+      >
+        <Header onOpenNotifications={handleOpenNotifications} />
+
+        <main className="flex-1 p-6 overflow-x-hidden">
+          <Outlet />
         </main>
       </div>
+
+      <NotifichePanel
+        open={notificationsOpen}
+        onClose={handleCloseNotifications}
+      />
     </div>
   )
 }

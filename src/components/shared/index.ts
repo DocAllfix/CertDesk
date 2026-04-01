@@ -1,2 +1,4 @@
-// Shared components: NormeMultiSelect, BadgeFase, BadgeUrgenza, BadgeCiclo, BadgeStato
-export {}
+export { BadgeFase }    from './BadgeFase'
+export { BadgeUrgenza } from './BadgeUrgenza'
+export { BadgeCiclo }   from './BadgeCiclo'
+export { BadgeStato }   from './BadgeStato'

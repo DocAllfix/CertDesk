@@ -1,62 +1,55 @@
+/**
+ * Sidebar — navigazione collassabile con tooltip.
+ * Ref: ../evalisdesk-ref/src/components/layout/Sidebar.jsx
+ *
+ * Struttura:
+ *   ┌─ Logo/brand ─────────────────┐
+ *   │  Nav items (main + database) │ flex-1 overflow-y-auto
+ *   ├─ Bottom section ─────────────┤
+ *   │  Notifiche · ConnectionInd.  │
+ *   │  User + Logout               │
+ *   └──────────────────────────────┘
+ *   Collapse toggle: assoluto a destra a h=72px
+ */
 import { useState, useEffect } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
 import {
-  BarChart3,
-  FolderOpen,
-  GitBranch,
-  Calendar,
-  Database,
-  ChevronDown,
-  Bell,
-  LogOut,
-  Shield,
-  Users,
-  UserCheck,
-  Archive,
-  ClipboardList,
+  LayoutDashboard, FolderKanban, Columns3, CalendarClock,
+  Database, Users, UserCheck, Archive, ClipboardList,
+  Bell, ChevronLeft, ChevronRight, ChevronDown, LogOut,
 } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
+import { ConnectionIndicator } from './ConnectionIndicator'
 import { useAuth } from '@/hooks/useAuth'
 import { APP_CONFIG } from '@/config/app.config'
-import { Button } from '@/components/ui/button'
 
-// ── Configurazione navigazione ───────────────────────────────────
+// ── Navigazione ─────────────────────────────────────────────────────
 
 const NAV_MAIN = [
-  { path: '/dashboard', label: 'Dashboard', icon: BarChart3 },
-  { path: '/pratiche', label: 'Pratiche', icon: FolderOpen },
-  { path: '/pipeline', label: 'Pipeline', icon: GitBranch },
-  { path: '/scadenze', label: 'Scadenze', icon: Calendar },
+  { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { path: '/pratiche',  label: 'Pratiche',  icon: FolderKanban    },
+  { path: '/pipeline',  label: 'Pipeline',  icon: Columns3        },
+  { path: '/scadenze',  label: 'Scadenze',  icon: CalendarClock   },
 ] as const
 
 const DATABASE_SUB = [
-  { path: '/database/clienti', label: 'Clienti', icon: Users },
-  { path: '/database/consulenti', label: 'Consulenti', icon: UserCheck },
-  { path: '/database/archivio', label: 'Archivio', icon: Archive },
-  { path: '/promemoria', label: 'Promemoria', icon: ClipboardList },
+  { path: '/database/clienti',    label: 'Clienti',    icon: Users         },
+  { path: '/database/consulenti', label: 'Consulenti', icon: UserCheck     },
+  { path: '/database/archivio',   label: 'Archivio',   icon: Archive       },
+  { path: '/promemoria',          label: 'Promemoria', icon: ClipboardList },
 ] as const
 
-// ── Helper: classi NavLink ────────────────────────────────────────
+// ── Props ────────────────────────────────────────────────────────────
 
-function navLinkClass({ isActive }: { isActive: boolean }) {
-  return cn(
-    'flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors',
-    isActive
-      ? 'bg-primary/15 text-primary font-medium'
-      : 'text-muted-foreground hover:bg-secondary hover:text-foreground'
-  )
+interface SidebarProps {
+  collapsed: boolean
+  onToggle: () => void
+  onOpenNotifications: () => void
+  /** Conteggio notifiche non lette — placeholder F6.2 */
+  unreadCount?: number
 }
 
-function subLinkClass({ isActive }: { isActive: boolean }) {
-  return cn(
-    'flex items-center gap-2.5 rounded-md px-3 py-1.5 text-sm transition-colors',
-    isActive
-      ? 'bg-primary/10 text-primary font-medium'
-      : 'text-muted-foreground hover:bg-secondary hover:text-foreground'
-  )
-}
-
-// ── Avatar con iniziali ───────────────────────────────────────────
+// ── UserAvatar ───────────────────────────────────────────────────────
 
 interface UserAvatarProps {
   nome: string
@@ -67,46 +60,89 @@ interface UserAvatarProps {
 
 function UserAvatar({ nome, cognome, avatarUrl, size = 'md' }: UserAvatarProps) {
   const initials = `${nome.charAt(0)}${cognome?.charAt(0) ?? ''}`.toUpperCase()
-  const sizeClass = size === 'sm' ? 'size-7 text-xs' : 'size-8 text-sm'
+  const sizeClass = size === 'sm' ? 'w-6 h-6 text-[9px]' : 'w-7 h-7 text-[10px]'
 
   if (avatarUrl) {
     return (
       <img
         src={avatarUrl}
-        alt={`${nome} ${cognome ?? ''}`}
-        className={cn('rounded-full object-cover flex-shrink-0', sizeClass)}
+        alt={nome}
+        className={`${sizeClass} rounded-full object-cover shrink-0`}
       />
     )
   }
-
   return (
-    <div
-      className={cn(
-        'flex items-center justify-center rounded-full bg-primary/20 text-primary font-semibold flex-shrink-0',
-        sizeClass
-      )}
-    >
-      {initials}
+    <div className={`${sizeClass} rounded-full bg-primary flex items-center justify-center shrink-0`}>
+      <span className="text-primary-foreground font-bold">{initials}</span>
     </div>
   )
 }
 
-// ── Sidebar ───────────────────────────────────────────────────────
+// ── NavItem ──────────────────────────────────────────────────────────
 
-// Placeholder contatore notifiche — verrà collegato in F6.2
-const NOTIFICHE_NON_LETTE = 0
+interface NavItemProps {
+  path: string
+  label: string
+  icon: React.ElementType
+  collapsed: boolean
+  exact?: boolean
+}
 
-export function Sidebar() {
+function NavItem({ path, label, icon: Icon, collapsed, exact = false }: NavItemProps) {
+  const location = useLocation()
+  const isActive = exact
+    ? location.pathname === path
+    : location.pathname === path || location.pathname.startsWith(path + '/')
+
+  const content = (
+    <NavLink
+      to={path}
+      className={`group flex items-center gap-3 px-3 py-2 rounded-md transition-all duration-150 relative cursor-pointer ${
+        isActive
+          ? 'bg-sidebar-accent text-sidebar-primary'
+          : 'text-sidebar-foreground hover:bg-sidebar-accent/70 hover:text-sidebar-accent-foreground'
+      }`}
+    >
+      {isActive && (
+        <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-4 bg-sidebar-primary rounded-r-full" />
+      )}
+      <Icon className="w-4 h-4 shrink-0" strokeWidth={isActive ? 2 : 1.75} />
+      {!collapsed && (
+        <span
+          className="text-[14px] leading-5 truncate"
+          style={{ fontWeight: isActive ? 600 : 400 }}
+        >
+          {label}
+        </span>
+      )}
+    </NavLink>
+  )
+
+  if (collapsed) {
+    return (
+      <Tooltip>
+        <TooltipTrigger asChild>{content}</TooltipTrigger>
+        <TooltipContent side="right" className="ml-1">{label}</TooltipContent>
+      </Tooltip>
+    )
+  }
+  return content
+}
+
+// ── Sidebar ──────────────────────────────────────────────────────────
+
+export function Sidebar({ collapsed, onToggle, onOpenNotifications, unreadCount = 0 }: SidebarProps) {
   const location = useLocation()
   const { userProfile, logout } = useAuth()
 
-  const isDatabaseActive = location.pathname.startsWith('/database') ||
+  const isDatabaseActive =
+    location.pathname.startsWith('/database') ||
     location.pathname === '/promemoria'
-  const [databaseExpanded, setDatabaseExpanded] = useState(isDatabaseActive)
 
-  // Auto-espandi quando si naviga su una rotta database
+  const [dbOpen, setDbOpen] = useState(isDatabaseActive)
+
   useEffect(() => {
-    if (isDatabaseActive) setDatabaseExpanded(true)
+    if (isDatabaseActive) setDbOpen(true)
   }, [isDatabaseActive])
 
   const nomeCompleto = userProfile
@@ -114,127 +150,203 @@ export function Sidebar() {
     : ''
 
   return (
-    <aside className="flex h-screen w-60 flex-shrink-0 flex-col border-r border-border bg-card">
-
-      {/* ── Logo / Brand ─────────────────────────────────────────── */}
-      <div className="flex items-center gap-2.5 px-4 py-4 border-b border-border">
-        <div className="flex items-center justify-center size-8 rounded-lg bg-primary/10 border border-primary/20 flex-shrink-0">
-          <Shield className="size-4 text-primary" strokeWidth={1.5} />
-        </div>
-        <div className="min-w-0">
-          <p className="text-sm font-bold text-foreground truncate">{APP_CONFIG.name}</p>
-          <p className="text-[10px] text-muted-foreground truncate leading-tight">
-            {APP_CONFIG.clienteName}
-          </p>
-        </div>
-      </div>
-
-      {/* ── Navigazione principale ───────────────────────────────── */}
-      <nav className="flex-1 overflow-y-auto px-2 py-3 space-y-0.5">
-
-        {/* Voci principali */}
-        {NAV_MAIN.map(({ path, label, icon: Icon }) => (
-          <NavLink key={path} to={path} className={navLinkClass}>
-            <Icon className="size-4 flex-shrink-0" strokeWidth={1.5} />
-            <span>{label}</span>
-          </NavLink>
-        ))}
-
-        {/* Database — sezione espandibile */}
-        <div>
-          <button
-            onClick={() => setDatabaseExpanded((prev) => !prev)}
-            className={cn(
-              'flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors',
-              isDatabaseActive
-                ? 'text-primary font-medium'
-                : 'text-muted-foreground hover:bg-secondary hover:text-foreground'
-            )}
-          >
-            <Database className="size-4 flex-shrink-0" strokeWidth={1.5} />
-            <span className="flex-1 text-left">Database</span>
-            <ChevronDown
-              className={cn(
-                'size-3.5 transition-transform duration-200',
-                databaseExpanded && 'rotate-180'
-              )}
-            />
-          </button>
-
-          {databaseExpanded && (
-            <div className="ml-7 mt-0.5 space-y-0.5 border-l border-border pl-3">
-              {DATABASE_SUB.map(({ path, label, icon: Icon }) => (
-                <NavLink key={path} to={path} className={subLinkClass}>
-                  <Icon className="size-3.5 flex-shrink-0" strokeWidth={1.5} />
-                  <span>{label}</span>
-                </NavLink>
-              ))}
-            </div>
-          )}
-        </div>
-      </nav>
-
-      {/* ── Area inferiore ───────────────────────────────────────── */}
-      <div className="border-t border-border px-2 py-3 space-y-1">
-
-        {/* Notifiche */}
-        <button
-          className={cn(
-            'flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors',
-            'text-muted-foreground hover:bg-secondary hover:text-foreground'
-          )}
+    <TooltipProvider delayDuration={100}>
+      <aside
+        className={`fixed left-0 top-0 h-screen bg-sidebar border-r border-sidebar-border flex flex-col z-40 transition-all duration-300 ${
+          collapsed ? 'w-[56px]' : 'w-[255px]'
+        }`}
+      >
+        {/* ── Brand ─────────────────────────────────────────────── */}
+        <div
+          className={`flex items-center gap-2.5 h-14 border-b border-sidebar-border shrink-0 ${
+            collapsed ? 'px-3 justify-center' : 'px-4'
+          }`}
         >
-          <div className="relative flex-shrink-0">
-            <Bell className="size-4" strokeWidth={1.5} />
-            {NOTIFICHE_NON_LETTE > 0 && (
-              <span className="absolute -right-1.5 -top-1.5 flex size-4 items-center justify-center rounded-full bg-destructive text-[10px] font-bold text-white">
-                {NOTIFICHE_NON_LETTE > 9 ? '9+' : NOTIFICHE_NON_LETTE}
-              </span>
-            )}
-          </div>
-          <span>Notifiche</span>
-          {NOTIFICHE_NON_LETTE > 0 && (
-            <span className="ml-auto rounded-full bg-destructive/15 px-1.5 py-0.5 text-[10px] font-medium text-destructive">
-              {NOTIFICHE_NON_LETTE}
-            </span>
-          )}
-        </button>
-      </div>
-
-      {/* ── Utente + Logout ──────────────────────────────────────── */}
-      <div className="border-t border-border p-3">
-        {userProfile && (
-          <div className="flex items-center gap-2.5">
-            <UserAvatar
-              nome={userProfile.nome}
-              cognome={userProfile.cognome}
-              avatarUrl={userProfile.avatar_url}
+          <div className="w-7 h-7 rounded-md bg-white flex items-center justify-center shrink-0 overflow-hidden">
+            <img
+              src={APP_CONFIG.logoUrl}
+              alt={APP_CONFIG.name}
+              className="w-full h-full object-contain"
             />
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-medium text-foreground leading-tight">
-                {nomeCompleto}
+          </div>
+          {!collapsed && (
+            <div className="min-w-0">
+              <p className="text-sidebar-accent-foreground font-semibold text-sm leading-tight truncate">
+                {APP_CONFIG.name}
               </p>
-              <p className="text-[10px] text-muted-foreground capitalize leading-tight">
-                {userProfile.ruolo}
+              <p className="text-sidebar-foreground text-[10px] truncate">
+                {APP_CONFIG.clienteName}
               </p>
             </div>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={logout}
-              title="Esci"
-              className="size-7 flex-shrink-0 text-muted-foreground hover:text-foreground hover:bg-secondary"
-            >
-              <LogOut className="size-3.5" strokeWidth={1.5} />
-            </Button>
-          </div>
-        )}
+          )}
+        </div>
 
-        {/* Versione */}
-        <p className="mt-2 text-center text-[10px] text-muted-foreground/50">
-          v0.1.0
-        </p>
-      </div>
-    </aside>
+        {/* ── Navigation ────────────────────────────────────────── */}
+        <nav className="flex-1 py-3 px-2 space-y-0.5 overflow-y-auto">
+
+          {/* Main nav */}
+          {NAV_MAIN.map(({ path, label, icon }) => (
+            <NavItem
+              key={path}
+              path={path}
+              label={label}
+              icon={icon}
+              collapsed={collapsed}
+            />
+          ))}
+
+          {/* Database espandibile */}
+          {collapsed ? (
+            /* In modalità collapsed: ogni sotto-voce come NavItem separato */
+            DATABASE_SUB.map(({ path, label, icon }) => (
+              <NavItem
+                key={path}
+                path={path}
+                label={label}
+                icon={icon}
+                collapsed={collapsed}
+              />
+            ))
+          ) : (
+            <div>
+              <button
+                onClick={() => setDbOpen(p => !p)}
+                className={`group flex w-full items-center gap-3 px-3 py-2 rounded-md transition-all duration-150 ${
+                  isDatabaseActive
+                    ? 'bg-sidebar-accent text-sidebar-primary'
+                    : 'text-sidebar-foreground hover:bg-sidebar-accent/70 hover:text-sidebar-accent-foreground'
+                }`}
+              >
+                {isDatabaseActive && (
+                  <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-4 bg-sidebar-primary rounded-r-full" />
+                )}
+                <Database
+                  className="w-4 h-4 shrink-0"
+                  strokeWidth={isDatabaseActive ? 2 : 1.75}
+                />
+                <span
+                  className="flex-1 text-left text-[14px] leading-5"
+                  style={{ fontWeight: isDatabaseActive ? 600 : 400 }}
+                >
+                  Database
+                </span>
+                <ChevronDown
+                  className={`w-3.5 h-3.5 transition-transform duration-200 ${dbOpen ? 'rotate-180' : ''}`}
+                />
+              </button>
+
+              {dbOpen && (
+                <div className="mt-0.5 space-y-0.5 pl-2">
+                  {DATABASE_SUB.map(({ path, label, icon: Icon }) => {
+                    const isActive = location.pathname === path
+                    return (
+                      <NavLink
+                        key={path}
+                        to={path}
+                        className={`flex items-center gap-2 rounded-md pl-6 pr-3 py-1.5 text-[13px] transition-all duration-150 ${
+                          isActive
+                            ? 'bg-sidebar-accent text-sidebar-primary font-semibold'
+                            : 'text-sidebar-foreground hover:bg-sidebar-accent/70 hover:text-sidebar-accent-foreground font-medium'
+                        }`}
+                      >
+                        <Icon className="w-3.5 h-3.5 shrink-0" strokeWidth={isActive ? 2 : 1.75} />
+                        {label}
+                      </NavLink>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+        </nav>
+
+        {/* ── Bottom section ────────────────────────────────────── */}
+        <div className="border-t border-sidebar-border p-2 space-y-0.5 shrink-0">
+
+          {/* Notifiche */}
+          {collapsed ? (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  onClick={onOpenNotifications}
+                  className="w-full flex items-center justify-center px-3 py-2 rounded-md text-sidebar-foreground hover:bg-sidebar-accent/70 hover:text-sidebar-accent-foreground transition-all duration-150 relative"
+                >
+                  <Bell className="w-4 h-4" strokeWidth={1.75} />
+                  {unreadCount > 0 && (
+                    <span className="absolute top-1 right-1 w-3.5 h-3.5 bg-destructive text-white text-[9px] font-bold rounded-full flex items-center justify-center">
+                      {unreadCount > 9 ? '9+' : unreadCount}
+                    </span>
+                  )}
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="right">Notifiche</TooltipContent>
+            </Tooltip>
+          ) : (
+            <button
+              onClick={onOpenNotifications}
+              className="w-full flex items-center gap-3 px-3 py-2 rounded-md text-sidebar-foreground hover:bg-sidebar-accent/70 hover:text-sidebar-accent-foreground transition-all duration-150"
+            >
+              <div className="relative shrink-0">
+                <Bell className="w-4 h-4" strokeWidth={1.75} />
+                {unreadCount > 0 && (
+                  <span className="absolute -top-1.5 -right-1.5 w-3.5 h-3.5 bg-destructive text-white text-[9px] font-bold rounded-full flex items-center justify-center">
+                    {unreadCount > 9 ? '9+' : unreadCount}
+                  </span>
+                )}
+              </div>
+              <span className="text-sm font-medium">Notifiche</span>
+            </button>
+          )}
+
+          {/* ConnectionIndicator */}
+          <ConnectionIndicator collapsed={collapsed} />
+
+          {/* User */}
+          {userProfile && (
+            <div
+              className={`flex items-center gap-2.5 px-3 py-2.5 mt-1 rounded-md bg-sidebar-accent/40 ${
+                collapsed ? 'justify-center' : ''
+              }`}
+            >
+              <UserAvatar
+                nome={userProfile.nome}
+                cognome={userProfile.cognome}
+                avatarUrl={userProfile.avatar_url}
+              />
+              {!collapsed && (
+                <>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs font-semibold text-sidebar-accent-foreground truncate leading-none">
+                      {nomeCompleto}
+                    </p>
+                    <p className="text-[10px] text-sidebar-foreground capitalize mt-0.5">
+                      {userProfile.ruolo}
+                    </p>
+                  </div>
+                  <button
+                    onClick={logout}
+                    title="Esci"
+                    className="shrink-0 w-6 h-6 flex items-center justify-center rounded text-sidebar-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+                  >
+                    <LogOut className="w-3.5 h-3.5" strokeWidth={1.75} />
+                  </button>
+                </>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* ── Collapse toggle ────────────────────────────────────── */}
+        <button
+          onClick={onToggle}
+          className="absolute -right-3 top-[72px] w-6 h-6 bg-card border border-border rounded-full flex items-center justify-center shadow-sm hover:bg-muted transition-colors z-10"
+        >
+          {collapsed
+            ? <ChevronRight className="w-3 h-3 text-muted-foreground" />
+            : <ChevronLeft  className="w-3 h-3 text-muted-foreground" />
+          }
+        </button>
+      </aside>
+    </TooltipProvider>
   )
 }
