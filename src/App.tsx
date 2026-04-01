@@ -5,6 +5,7 @@ import { AuthProvider } from '@/components/layout/AuthProvider'
 import { AppLayout } from '@/components/layout/AppLayout'
 import { useAuth } from '@/hooks/useAuth'
 import LoginPage from '@/pages/auth/LoginPage'
+import ClientiPage from '@/pages/database/ClientiPage'
 
 // ── QueryClient ──────────────────────────────────────────────────
 
@@ -77,7 +78,7 @@ export default function App() {
                 <Route path="scadenze" element={<Placeholder name="ScadenzePage" />} />
 
                 {/* Database */}
-                <Route path="database/clienti" element={<Placeholder name="ClientiPage" />} />
+                <Route path="database/clienti" element={<ClientiPage />} />
                 <Route path="database/consulenti" element={<Placeholder name="ConsulentiPage" />} />
                 <Route path="database/archivio" element={<Placeholder name="ArchivioPratiche" />} />
                 <Route path="promemoria" element={<Placeholder name="PromemoriaPage" />} />

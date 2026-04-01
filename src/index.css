@@ -63,9 +63,9 @@
     /* ── Dark mode ────────────────────────────────────────────────── */
     --background:           228 26% 25%;        /* #30324E */
     --foreground:           228 10% 83%;        /* #CDD0DA */
-    --card:                 231 20% 28%;        /* #393B53 */
+    --card:                 231 20% 33%;        /* #424566 — più chiaro per contrasto */
     --card-foreground:      228 10% 83%;
-    --popover:              228 26% 25%;
+    --popover:              231 20% 33%;
     --popover-foreground:   228 10% 83%;
     --primary:              213 100% 46%;
     --primary-foreground:   0 0% 100%;
@@ -77,7 +77,7 @@
     --accent-foreground:    228 10% 83%;
     --destructive:          351 75% 62%;
     --destructive-foreground: 0 0% 100%;
-    --border:               229 43% 15%;        /* #181B34 */
+    --border:               229 30% 38%;        /* bordo visibile in dark */
     --input:                229 22% 32%;
     --ring:                 213 100% 46%;
     --success:              151 64% 51%;

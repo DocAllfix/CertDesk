@@ -211,7 +211,7 @@ export function Sidebar({ collapsed, onToggle, onOpenNotifications, unreadCount 
             <div>
               <button
                 onClick={() => setDbOpen(p => !p)}
-                className={`group flex w-full items-center gap-3 px-3 py-2 rounded-md transition-all duration-150 ${
+                className={`group flex w-full items-center gap-3 px-3 py-2 rounded-md transition-all duration-150 cursor-pointer ${
                   isDatabaseActive
                     ? 'bg-sidebar-accent text-sidebar-primary'
                     : 'text-sidebar-foreground hover:bg-sidebar-accent/70 hover:text-sidebar-accent-foreground'
