@@ -125,6 +125,10 @@ export interface FiltriPratiche {
   priorita?: number | null
   /** Mostra anche pratiche archiviate */
   includi_archiviate?: boolean
+  /** Filtra pratiche con data_scadenza ≤ questa data (formato ISO: 'YYYY-MM-DD') */
+  scadenza_max?: string | null
+  /** Shortcut: filtra solo pratiche con stato = 'attiva' (ha precedenza su stato) */
+  solo_attive?: boolean
   /** Ordinamento */
   ordinamento?: OrdinamentoPratiche
   /** Direzione ordinamento */
