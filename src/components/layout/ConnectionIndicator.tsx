@@ -1,44 +1,45 @@
 /**
- * ConnectionIndicator — mostra lo stato della connessione internet.
+ * ConnectionIndicator — stato connessione WebSocket Supabase Realtime.
  * Ref: ../evalisdesk-ref/src/components/layout/ConnectionIndicator.jsx
+ *
+ * Legge useRealtimeStatus() → pallino verde/arancio/rosso in sidebar.
+ *   connected    → verde     (WebSocket attivo)
+ *   connecting   → giallo    (in attesa connessione iniziale)
+ *   reconnecting → arancio lampeggiante (WebSocket caduto)
+ *   polling      → arancio   (fallback polling attivo)
+ *   error        → rosso     (errore permanente)
  */
-import { useState, useEffect } from 'react'
 import { Wifi, WifiOff, RefreshCw } from 'lucide-react'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
+import { useRealtimeStatus, type RealtimeConnectionStatus } from '@/hooks/useRealtimeStatus'
 
-type Status = 'connected' | 'reconnecting' | 'offline'
+// ── Config stato → stile ─────────────────────────────────────────
 
 interface StatusConfig {
-  label: string
-  dotClass: string
+  label:     string
+  dotClass:  string
   textClass: string
-  icon: React.ElementType
+  Icon:      React.ElementType
 }
 
-const STATUS_CONFIG: Record<Status, StatusConfig> = {
-  connected:    { label: 'Connesso',        dotClass: 'bg-success',                    textClass: 'text-success',     icon: Wifi      },
-  reconnecting: { label: 'Riconnessione...', dotClass: 'bg-warning animate-pulse',     textClass: 'text-warning',     icon: RefreshCw },
-  offline:      { label: 'Offline',         dotClass: 'bg-destructive',                textClass: 'text-destructive', icon: WifiOff   },
+const STATUS_CONFIG: Record<RealtimeConnectionStatus, StatusConfig> = {
+  connected:    { label: 'Connesso',          dotClass: 'bg-success',              textClass: 'text-success',     Icon: Wifi      },
+  connecting:   { label: 'Connessione...',    dotClass: 'bg-warning animate-pulse', textClass: 'text-warning',    Icon: RefreshCw },
+  reconnecting: { label: 'Riconnessione...', dotClass: 'bg-warning animate-pulse', textClass: 'text-warning',     Icon: RefreshCw },
+  polling:      { label: 'Polling attivo',   dotClass: 'bg-warning',               textClass: 'text-warning',     Icon: RefreshCw },
+  error:        { label: 'Disconnesso',      dotClass: 'bg-destructive',           textClass: 'text-destructive', Icon: WifiOff   },
 }
+
+// ── Props ─────────────────────────────────────────────────────────
 
 interface ConnectionIndicatorProps {
   collapsed: boolean
 }
 
+// ── Componente ────────────────────────────────────────────────────
+
 export function ConnectionIndicator({ collapsed }: ConnectionIndicatorProps) {
-  const [status, setStatus] = useState<Status>('connected')
-
-  useEffect(() => {
-    const handleOffline = () => setStatus('offline')
-    const handleOnline  = () => setStatus('connected')
-    window.addEventListener('offline', handleOffline)
-    window.addEventListener('online',  handleOnline)
-    return () => {
-      window.removeEventListener('offline', handleOffline)
-      window.removeEventListener('online',  handleOnline)
-    }
-  }, [])
-
+  const status = useRealtimeStatus()
   const { label, dotClass, textClass } = STATUS_CONFIG[status]
 
   if (collapsed) {

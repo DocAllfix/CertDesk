@@ -3,6 +3,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { Loader2 } from 'lucide-react'
 import { AuthProvider } from '@/components/layout/AuthProvider'
 import { AppLayout } from '@/components/layout/AppLayout'
+import { Toaster } from '@/components/ui/sonner'
 import { useAuth } from '@/hooks/useAuth'
 import LoginPage from '@/pages/auth/LoginPage'
 import ClientiPage from '@/pages/database/ClientiPage'
@@ -96,6 +97,7 @@ export default function App() {
           </Routes>
         </AuthProvider>
       </BrowserRouter>
+      <Toaster />
     </QueryClientProvider>
   )
 }

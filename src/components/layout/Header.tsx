@@ -5,11 +5,12 @@
  * h-12 · bg-card · border-b · sticky top-0 z-30
  */
 import { useLocation } from 'react-router-dom'
-import { Search, Bell, Sun, Moon } from 'lucide-react'
+import { Search, Sun, Moon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { useAuth } from '@/hooks/useAuth'
 import { useTheme } from '@/hooks/useTheme'
+import { NotificheBadgeHeader } from '@/components/notifiche'
 
 // ── Mappa path → titolo pagina ───────────────────────────────────────
 
@@ -62,11 +63,9 @@ function MiniAvatar({ nome, cognome, avatarUrl }: MiniAvatarProps) {
 
 interface HeaderProps {
   onOpenNotifications: () => void
-  /** Conteggio notifiche non lette — placeholder F6.2 */
-  unreadCount?: number
 }
 
-export function Header({ onOpenNotifications, unreadCount = 0 }: HeaderProps) {
+export function Header({ onOpenNotifications }: HeaderProps) {
   const location  = useLocation()
   const { userProfile } = useAuth()
   const { isDark, toggleTheme } = useTheme()
@@ -111,19 +110,7 @@ export function Header({ onOpenNotifications, unreadCount = 0 }: HeaderProps) {
         </Button>
 
         {/* Notifiche */}
-        <Button
-          variant="ghost"
-          size="icon"
-          className="relative w-8 h-8 text-muted-foreground hover:text-foreground"
-          onClick={onOpenNotifications}
-        >
-          <Bell className="w-4 h-4" />
-          {unreadCount > 0 && (
-            <span className="absolute top-0.5 right-0.5 w-4 h-4 bg-destructive text-white text-[9px] font-bold rounded-full flex items-center justify-center">
-              {unreadCount > 9 ? '9+' : unreadCount}
-            </span>
-          )}
-        </Button>
+        <NotificheBadgeHeader onClick={onOpenNotifications} />
 
         {/* Avatar */}
         {userProfile && (

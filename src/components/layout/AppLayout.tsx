@@ -11,13 +11,17 @@
  */
 import { useState } from 'react'
 import { Outlet } from 'react-router-dom'
-import { Sidebar }        from './Sidebar'
-import { Header }         from './Header'
-import { NotifichePanel } from './NotifichePanel'
+import { Sidebar }             from './Sidebar'
+import { Header }              from './Header'
+import { NotifichePanel }           from '@/components/notifiche'
+import { useNotificheSubscription } from '@/hooks/useNotifiche'
 
 export function AppLayout() {
   const [collapsed,          setCollapsed]          = useState(false)
   const [notificationsOpen,  setNotificationsOpen]  = useState(false)
+
+  // Subscription unica per tutta l'app (canale Realtime + heartbeat + polling)
+  useNotificheSubscription()
 
   const handleToggle             = () => setCollapsed(p => !p)
   const handleOpenNotifications  = () => setNotificationsOpen(true)

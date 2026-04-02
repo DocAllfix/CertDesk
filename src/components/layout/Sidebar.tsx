@@ -16,10 +16,11 @@ import { NavLink, useLocation } from 'react-router-dom'
 import {
   LayoutDashboard, FolderKanban, Columns3, CalendarClock,
   Database, Users, UserCheck, Archive, ClipboardList,
-  Bell, ChevronLeft, ChevronRight, ChevronDown, LogOut,
+  ChevronLeft, ChevronRight, ChevronDown, LogOut,
 } from 'lucide-react'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { ConnectionIndicator } from './ConnectionIndicator'
+import { NotificheBadgeSidebar } from '@/components/notifiche'
 import { useAuth } from '@/hooks/useAuth'
 import { APP_CONFIG } from '@/config/app.config'
 
@@ -45,8 +46,7 @@ interface SidebarProps {
   collapsed: boolean
   onToggle: () => void
   onOpenNotifications: () => void
-  /** Conteggio notifiche non lette — placeholder F6.2 */
-  unreadCount?: number
+
 }
 
 // ── UserAvatar ───────────────────────────────────────────────────────
@@ -131,7 +131,7 @@ function NavItem({ path, label, icon: Icon, collapsed, exact = false }: NavItemP
 
 // ── Sidebar ──────────────────────────────────────────────────────────
 
-export function Sidebar({ collapsed, onToggle, onOpenNotifications, unreadCount = 0 }: SidebarProps) {
+export function Sidebar({ collapsed, onToggle, onOpenNotifications }: SidebarProps) {
   const location = useLocation()
   const { userProfile, logout } = useAuth()
 
@@ -264,39 +264,7 @@ export function Sidebar({ collapsed, onToggle, onOpenNotifications, unreadCount 
         <div className="border-t border-sidebar-border p-2 space-y-0.5 shrink-0">
 
           {/* Notifiche */}
-          {collapsed ? (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button
-                  onClick={onOpenNotifications}
-                  className="w-full flex items-center justify-center px-3 py-2 rounded-md text-sidebar-foreground hover:bg-sidebar-accent/70 hover:text-sidebar-accent-foreground transition-all duration-150 relative"
-                >
-                  <Bell className="w-4 h-4" strokeWidth={1.75} />
-                  {unreadCount > 0 && (
-                    <span className="absolute top-1 right-1 w-3.5 h-3.5 bg-destructive text-white text-[9px] font-bold rounded-full flex items-center justify-center">
-                      {unreadCount > 9 ? '9+' : unreadCount}
-                    </span>
-                  )}
-                </button>
-              </TooltipTrigger>
-              <TooltipContent side="right">Notifiche</TooltipContent>
-            </Tooltip>
-          ) : (
-            <button
-              onClick={onOpenNotifications}
-              className="w-full flex items-center gap-3 px-3 py-2 rounded-md text-sidebar-foreground hover:bg-sidebar-accent/70 hover:text-sidebar-accent-foreground transition-all duration-150"
-            >
-              <div className="relative shrink-0">
-                <Bell className="w-4 h-4" strokeWidth={1.75} />
-                {unreadCount > 0 && (
-                  <span className="absolute -top-1.5 -right-1.5 w-3.5 h-3.5 bg-destructive text-white text-[9px] font-bold rounded-full flex items-center justify-center">
-                    {unreadCount > 9 ? '9+' : unreadCount}
-                  </span>
-                )}
-              </div>
-              <span className="text-sm font-medium">Notifiche</span>
-            </button>
-          )}
+          <NotificheBadgeSidebar onClick={onOpenNotifications} collapsed={collapsed} />
 
           {/* ConnectionIndicator */}
           <ConnectionIndicator collapsed={collapsed} />
