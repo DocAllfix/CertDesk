@@ -13,7 +13,7 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
   ArrowLeft, ChevronRight, Sparkles, Check,
-  AlertTriangle, Ban, User, Calendar, MapPin,
+  User, Calendar, MapPin,
   Building2, FileText, Phone, Mail, MessageSquare, Paperclip,
 } from 'lucide-react'
 import { format } from 'date-fns'
@@ -23,7 +23,10 @@ import { Button } from '@/components/ui/button'
 import { BadgeFase } from '@/components/shared/BadgeFase'
 import { BadgeCiclo } from '@/components/shared/BadgeCiclo'
 import { BadgeStato } from '@/components/shared/BadgeStato'
-import { PraticaModal } from './PraticaModal'
+import { PraticaModal }          from './PraticaModal'
+import { AvanzaFaseModal }       from './AvanzaFaseModal'
+import { BloccoDocumentiAlert }  from './BloccoDocumentiAlert'
+import { StatoPraticaBanner }    from './StatoPraticaBanner'
 
 import type { PraticaConRelazioni, FaseType } from '@/types/app.types'
 
@@ -92,59 +95,16 @@ interface PraticaDettaglioProps {
 // ── Componente ────────────────────────────────────────────────────
 
 export function PraticaDettaglio({ pratica }: PraticaDettaglioProps) {
-  const [editOpen, setEditOpen] = useState(false)
+  const [editOpen,   setEditOpen]   = useState(false)
+  const [avanzaOpen, setAvanzaOpen] = useState(false)
 
   const faseAttuale  = pratica.fase
   const faseOrdine   = FASE_ORDINE[faseAttuale]
   const faseNext     = FASE_NEXT[faseAttuale]
 
   const clienteNome  = pratica.cliente?.nome ?? pratica.cliente?.ragione_sociale ?? '\u2014'
-  const isBloccata   = faseAttuale === 'elaborazione_pratica' && !pratica.documenti_ricevuti
 
-  // ── Banner stato (sospesa / annullata) ────────────────────────
-
-  const renderStatoBanner = () => {
-    if (pratica.stato === 'attiva') return null
-    const isSospesa = pratica.stato === 'sospesa'
-    return (
-      <div className={`flex items-center gap-3 px-4 py-3 rounded-xl border ${
-        isSospesa
-          ? 'bg-warning/10 border-warning/30'
-          : 'bg-destructive/10 border-destructive/30'
-      }`}>
-        {isSospesa
-          ? <AlertTriangle className="w-5 h-5 shrink-0 text-warning" />
-          : <Ban className="w-5 h-5 shrink-0 text-destructive" />}
-        <div className="flex-1 min-w-0">
-          <p className={`text-sm font-semibold ${isSospesa ? 'text-warning' : 'text-destructive'}`}>
-            {isSospesa ? 'Pratica Sospesa' : 'Pratica Annullata'}
-          </p>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            {isSospesa
-              ? 'Questa pratica è attualmente sospesa. Nessuna azione è possibile finché non viene riattivata.'
-              : 'Questa pratica è stata annullata e non può essere modificata.'}
-          </p>
-        </div>
-      </div>
-    )
-  }
-
-  // ── Alert blocco documenti ────────────────────────────────────
-
-  const renderBloccoAlert = () => {
-    if (!isBloccata) return null
-    return (
-      <div className="flex items-center gap-3 px-4 py-3 rounded-xl border bg-destructive/10 border-destructive/30">
-        <AlertTriangle className="w-5 h-5 shrink-0 text-destructive" />
-        <div>
-          <p className="text-sm font-semibold text-destructive">Pratica BLOCCATA</p>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            I documenti non sono ancora stati ricevuti. Impossibile avanzare alla fase Firme.
-          </p>
-        </div>
-      </div>
-    )
-  }
+  // Banner stato e blocco documenti ora usano i componenti reali F5
 
   // ── Header card ───────────────────────────────────────────────
 
@@ -197,9 +157,8 @@ export function PraticaDettaglio({ pratica }: PraticaDettaglioProps) {
           </Button>
           {faseNext && pratica.stato === 'attiva' && (
             <Button
-              className="bg-primary hover:bg-primary/90 text-primary-foreground h-8 px-3 text-sm"
-              disabled
-              title="Avanzamento fase — implementazione in F5"
+              className="bg-primary hover:bg-primary/90 text-primary-foreground h-8 px-3 text-sm cursor-pointer"
+              onClick={() => setAvanzaOpen(true)}
             >
               Avanza a{' '}
               <BadgeFase fase={faseNext} short className="ml-1.5 bg-white/10 border-white/20 text-white" />
@@ -436,8 +395,12 @@ export function PraticaDettaglio({ pratica }: PraticaDettaglioProps) {
 
   return (
     <div className="space-y-5 max-w-[1400px]">
-      {renderStatoBanner()}
-      {renderBloccoAlert()}
+      {/* Banner stato (sospesa/annullata) con motivo + riattiva */}
+      <StatoPraticaBanner pratica={pratica} />
+
+      {/* Alert blocco documenti in fase 4 con "Segna ricevuti" */}
+      <BloccoDocumentiAlert pratica={pratica} />
+
       {renderHeader()}
       {renderStepper()}
 
@@ -458,6 +421,16 @@ export function PraticaDettaglio({ pratica }: PraticaDettaglioProps) {
         onClose={() => setEditOpen(false)}
         pratica={pratica}
       />
+
+      {/* Modal avanzamento fase con prerequisiti reali */}
+      {faseNext && (
+        <AvanzaFaseModal
+          open={avanzaOpen}
+          onClose={() => setAvanzaOpen(false)}
+          pratica={pratica}
+          targetFase={faseNext}
+        />
+      )}
     </div>
   )
 }
