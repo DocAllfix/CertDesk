@@ -12,6 +12,7 @@ import {
   deleteAllegato,
   type UploadAllegatoParams,
 } from '@/lib/storage/allegati'
+import { useAuth } from '@/hooks/useAuth'
 import type { AllegatoConCaricatoDa } from '@/types/app.types'
 
 // ── Query key factory ─────────────────────────────────────────────
@@ -48,10 +49,11 @@ export function useAllegatiPratica(praticaId: string | undefined) {
 /** Mutation per caricare un allegato. Invalida la lista allegati al successo. */
 export function useUploadAllegato(praticaId: string) {
   const queryClient = useQueryClient()
+  const { userProfile } = useAuth()
 
   return useMutation({
-    mutationFn: (params: Omit<UploadAllegatoParams, 'praticaId'>) =>
-      uploadAllegato({ ...params, praticaId }),
+    mutationFn: (params: Omit<UploadAllegatoParams, 'praticaId' | 'caricatoDa'>) =>
+      uploadAllegato({ ...params, praticaId, caricatoDa: userProfile?.id ?? null }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: allegatiKeys.pratica(praticaId) })
     },

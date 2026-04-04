@@ -20,6 +20,7 @@ export interface UploadAllegatoParams {
   file: File
   faseRiferimento?: FaseType | null
   descrizione?: string | null
+  caricatoDa?: string | null
 }
 
 export interface AllegatoUploadResult {
@@ -65,7 +66,7 @@ export async function getSignedUrl(
  * Se l'INSERT su DB fallisce, rimuove il file dallo storage (rollback).
  */
 export async function uploadAllegato(params: UploadAllegatoParams): Promise<AllegatoUploadResult> {
-  const { praticaId, file, faseRiferimento, descrizione } = params
+  const { praticaId, file, faseRiferimento, descrizione, caricatoDa } = params
   const storagePath = buildStoragePath(praticaId, file.name)
 
   // 1. Upload fisico
@@ -89,6 +90,7 @@ export async function uploadAllegato(params: UploadAllegatoParams): Promise<Alle
       dimensione_bytes: file.size,
       fase_riferimento: faseRiferimento ?? null,
       descrizione: descrizione ?? null,
+      caricato_da: caricatoDa ?? null,
     })
     .select('id, storage_path')
     .single()

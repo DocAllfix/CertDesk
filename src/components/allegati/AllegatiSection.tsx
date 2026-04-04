@@ -107,9 +107,14 @@ export function AllegatiSection({ praticaId }: AllegatiSectionProps) {
               setUploadingFiles((prev) => prev.filter((f) => f.localId !== localId))
             }, 600)
           },
-          onError: () => {
+          onError: (err) => {
             clearInterval(interval)
             setUploadingFiles((prev) => prev.filter((f) => f.localId !== localId))
+            toast.error(
+              err instanceof Error
+                ? err.message
+                : 'Errore nel caricamento del file. Riprova.',
+            )
           },
         },
       )
