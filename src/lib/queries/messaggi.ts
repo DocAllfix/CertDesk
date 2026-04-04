@@ -71,8 +71,12 @@ export async function createMessaggio(params: CreateMessaggioParams): Promise<vo
     })
     if (error) console.error('Errore notifica richiesta:', error.message)
 
-  } else if (tipo === 'commento' && !destinatarioId) {
-    // Notifica 'info' a tutti gli utenti attivi tranne l'autore
+  } else if ((tipo === 'richiesta' || tipo === 'commento') && !destinatarioId) {
+    // Notifica a tutti gli utenti attivi tranne l'autore
+    // (sia commento generico che richiesta broadcast a "Tutti")
+    const titoloNotifica = tipo === 'richiesta' ? 'Nuova richiesta' : 'Nuovo commento'
+    const tipoNotifica   = tipo === 'richiesta' ? 'richiesta' : 'info'
+
     const { data: utenti, error: utentiError } = await supabase
       .from('user_profiles')
       .select('id')
@@ -80,18 +84,18 @@ export async function createMessaggio(params: CreateMessaggioParams): Promise<vo
       .neq('id', autoreId)
 
     if (utentiError) {
-      console.error('Errore nel recupero utenti per notifica commento:', utentiError.message)
+      console.error('Errore nel recupero utenti per notifica broadcast:', utentiError.message)
     } else if (utenti) {
       for (const u of utenti) {
         const { error } = await supabase.rpc('crea_notifica', {
           p_destinatario_id: u.id,
           p_pratica_id:      praticaId,
-          p_tipo:            'info',
-          p_titolo:          'Nuovo commento',
+          p_tipo:            tipoNotifica,
+          p_titolo:          titoloNotifica,
           p_messaggio:       testoBreve,
           p_mittente_id:     autoreId,
         })
-        if (error) console.error(`Errore notifica commento a ${u.id}:`, error.message)
+        if (error) console.error(`Errore notifica broadcast a ${u.id}:`, error.message)
       }
     }
 
