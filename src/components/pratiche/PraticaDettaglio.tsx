@@ -14,7 +14,7 @@ import { Link } from 'react-router-dom'
 import {
   ArrowLeft, ChevronRight, Sparkles, Check,
   User, Calendar, MapPin,
-  Building2, FileText, Phone, Mail, MessageSquare,
+  Building2, FileText, Phone, Mail,
 } from 'lucide-react'
 import { format } from 'date-fns'
 import { it } from 'date-fns/locale'
@@ -28,6 +28,7 @@ import { AvanzaFaseModal }       from './AvanzaFaseModal'
 import { BloccoDocumentiAlert }  from './BloccoDocumentiAlert'
 import { StatoPraticaBanner }    from './StatoPraticaBanner'
 import { AllegatiSection }       from '@/components/allegati'
+import { CommunicationFeed }    from './CommunicationFeed'
 
 import type { PraticaConRelazioni, FaseType } from '@/types/app.types'
 
@@ -274,19 +275,6 @@ export function PraticaDettaglio({ pratica }: PraticaDettaglioProps) {
     )
   }
 
-  // ── Colonna sinistra: Feed comunicazione (placeholder F8) ─────
-
-  const renderCommunicationPlaceholder = () => (
-    <div className="bg-card rounded-xl border border-border overflow-hidden">
-      <div className="px-5 py-4 border-b border-border flex items-center gap-2">
-        <MessageSquare className="w-4 h-4 text-muted-foreground" />
-        <h3 className="font-semibold text-foreground">Comunicazioni</h3>
-      </div>
-      <div className="p-8 text-center">
-        <p className="text-sm text-muted-foreground">Feed messaggi — implementazione in F8</p>
-      </div>
-    </div>
-  )
 
   // ── Colonna destra: Assegnazione ──────────────────────────────
 
@@ -395,7 +383,7 @@ export function PraticaDettaglio({ pratica }: PraticaDettaglioProps) {
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-5">
         <div className="lg:col-span-3 space-y-5">
           {renderInfoSection()}
-          {renderCommunicationPlaceholder()}
+          <CommunicationFeed praticaId={pratica.id} />
         </div>
         <div className="lg:col-span-2 space-y-5">
           {renderAssegnazionePanel()}
