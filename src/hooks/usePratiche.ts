@@ -69,8 +69,11 @@ export function useUpdatePratica() {
     mutationFn: ({ id, data }: { id: string; data: UpdatePratica }) =>
       updatePratica(id, data),
     onSuccess: (updated) => {
+      // Invalida lista E dettaglio: updatePratica restituisce solo la flat row
+      // (senza join), quindi non è sicuro usare setQueryData sul dettaglio.
+      // invalidateQueries triggera un refetch con i dati completi.
       qc.invalidateQueries({ queryKey: praticheKeys.lists() })
-      qc.setQueryData(praticheKeys.detail(updated.id), updated)
+      qc.invalidateQueries({ queryKey: praticheKeys.detail(updated.id) })
     },
   })
 }
@@ -100,11 +103,12 @@ export function useAvanzaFase() {
       allUsers,
       motivo,
     }),
-    onSuccess: (updated) => {
-      // Cambio fase impatta pipeline, scadenze, dashboard → invalida tutta la cache pratiche
+    onSuccess: () => {
+      // Cambio fase impatta pipeline, scadenze, dashboard → invalida tutta la cache pratiche.
+      // NON usare setQueryData: executeAvanzaFase restituisce solo la flat row (senza join)
+      // e sovrascrivere il dettaglio con dati incompleti causa crash in PraticaDettaglio.
+      // invalidateQueries triggera un refetch immediato dei componenti osservatori.
       qc.invalidateQueries({ queryKey: praticheKeys.all })
-      // Aggiorna subito il dettaglio per evitare flash di dati vecchi
-      qc.setQueryData(praticheKeys.detail(updated.id), updated)
     },
   })
 }

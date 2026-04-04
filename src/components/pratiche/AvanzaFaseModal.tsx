@@ -18,12 +18,14 @@
  * - Freccia fase attuale → fase target con colori
  */
 import { useState } from 'react'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
 } from '@/components/ui/dialog'
 import { Button }    from '@/components/ui/button'
 import { Textarea }  from '@/components/ui/textarea'
 import { Check, X, ChevronRight, AlertTriangle, Loader2 } from 'lucide-react'
+import { toast } from 'sonner'
 
 import { BadgeFase } from '@/components/shared/BadgeFase'
 import {
@@ -31,7 +33,8 @@ import {
   FASE_INDEX,
   FASE_LABELS,
 } from '@/lib/workflow'
-import { useAvanzaFase } from '@/hooks/usePratiche'
+import { useAvanzaFase, praticheKeys } from '@/hooks/usePratiche'
+import { updatePratica }  from '@/lib/queries/pratiche'
 import { useTeamMembers } from '@/hooks/useTeamMembers'
 import { useAuth }        from '@/hooks/useAuth'
 
@@ -39,10 +42,19 @@ import type { PraticaConRelazioni, FaseType } from '@/types/app.types'
 
 // ── Prerequisiti per fase target ─────────────────────────────────
 
+/**
+ * editType: se il prerequisito non è soddisfatto, il modal mostra
+ * un'azione inline per completarlo senza uscire.
+ * - 'date'   → input type="date" + bottone Salva  (data_verifica)
+ * - 'toggle' → bottone "Segna come ✓"             (booleani)
+ */
 interface Prerequisito {
-  id: string
-  label: string
+  id:          string
+  label:       string
   soddisfatto: boolean
+  editType?:   'date' | 'toggle'
+  fieldName?:  'data_verifica' | 'proforma_emessa' | 'documenti_ricevuti'
+  actionLabel?: string
 }
 
 function getPrerequisiti(
@@ -57,31 +69,39 @@ function getPrerequisiti(
     case 'richiesta_proforma':
       return [
         {
-          id: 'data_verifica',
-          label: pratica.data_verifica
-            ? `Data verifica impostata: ${new Date(pratica.data_verifica).toLocaleDateString('it-IT')}`
-            : 'Imposta data verifica prima di procedere',
+          id:          'data_verifica',
+          label:       pratica.data_verifica
+            ? `Data verifica: ${new Date(pratica.data_verifica).toLocaleDateString('it-IT')}`
+            : 'Data verifica non ancora impostata',
           soddisfatto: !!pratica.data_verifica,
+          editType:    'date',
+          fieldName:   'data_verifica',
         },
       ]
     case 'elaborazione_pratica':
       return [
         {
-          id: 'proforma_emessa',
-          label: pratica.proforma_emessa
+          id:          'proforma_emessa',
+          label:       pratica.proforma_emessa
             ? 'Proforma emessa'
             : 'Proforma non ancora emessa',
           soddisfatto: !!pratica.proforma_emessa,
+          editType:    'toggle',
+          fieldName:   'proforma_emessa',
+          actionLabel: 'Segna come emessa',
         },
       ]
     case 'firme':
       return [
         {
-          id: 'documenti_ricevuti',
-          label: pratica.documenti_ricevuti
+          id:          'documenti_ricevuti',
+          label:       pratica.documenti_ricevuti
             ? 'Documenti ricevuti'
             : 'Documenti mancanti — in attesa di ricezione',
           soddisfatto: !!pratica.documenti_ricevuti,
+          editType:    'toggle',
+          fieldName:   'documenti_ricevuti',
+          actionLabel: 'Segna come ricevuti',
         },
       ]
     case 'completata':
@@ -108,9 +128,27 @@ export function AvanzaFaseModal({ open, onClose, pratica, targetFase }: AvanzaFa
   const { user } = useAuth()
   const { data: team = [] } = useTeamMembers()
   const avanzaFase = useAvanzaFase()
+  const qc = useQueryClient()
 
-  const [motivo, setMotivo] = useState('')
-  const [dbError, setDbError] = useState<string | null>(null)
+  const [motivo,    setMotivo]    = useState('')
+  const [dbError,   setDbError]   = useState<string | null>(null)
+  const [dateValue, setDateValue] = useState('')
+
+  // ── Mutation inline per prerequisiti ─────────────────────────
+  // Usa updatePratica diretto + invalidateQueries(detail) — NON useUpdatePratica
+  // per evitare il setQueryData con flat row che causerebbe crash in PraticaDettaglio.
+  const inlineSave = useMutation({
+    mutationFn: (update: { data_verifica?: string; proforma_emessa?: boolean; documenti_ricevuti?: boolean }) =>
+      updatePratica(pratica.id, update),
+    onSuccess: () => {
+      // Refetch del dettaglio: la pratica prop si aggiornerà automaticamente
+      // e il prerequisito passerà a soddisfatto nel prossimo render.
+      qc.invalidateQueries({ queryKey: praticheKeys.detail(pratica.id) })
+    },
+    onError: (err) => {
+      toast.error((err as Error).message)
+    },
+  })
 
   const isRetrocessione = FASE_INDEX[targetFase] < FASE_INDEX[pratica.fase]
   const prerequisiti = isRetrocessione ? [] : getPrerequisiti(pratica, targetFase)
@@ -118,7 +156,7 @@ export function AvanzaFaseModal({ open, onClose, pratica, targetFase }: AvanzaFa
 
   // Per retrocessione il motivo è obbligatorio
   const motivoOk = isRetrocessione ? motivo.trim().length > 0 : true
-  const canProceed = preValidazione.canAdvance && motivoOk && !avanzaFase.isPending
+  const canProceed = preValidazione.canAdvance && motivoOk && !avanzaFase.isPending && !inlineSave.isPending
 
   function handleConfirm() {
     if (!user) return
@@ -150,6 +188,7 @@ export function AvanzaFaseModal({ open, onClose, pratica, targetFase }: AvanzaFa
     if (!isOpen) {
       setMotivo('')
       setDbError(null)
+      setDateValue('')
       onClose()
     }
   }
@@ -189,20 +228,59 @@ export function AvanzaFaseModal({ open, onClose, pratica, targetFase }: AvanzaFa
                 {prerequisiti.map(p => (
                   <div
                     key={p.id}
-                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg border transition-all text-left ${
+                    className={`w-full flex flex-col gap-2 px-4 py-3 rounded-lg border transition-all ${
                       p.soddisfatto
                         ? 'bg-success/5 border-success/30 text-success'
                         : 'bg-destructive/5 border-destructive/20 text-destructive'
                     }`}
                   >
-                    <div className={`w-5 h-5 rounded flex items-center justify-center shrink-0 border transition-colors ${
-                      p.soddisfatto ? 'bg-success border-success' : 'bg-destructive/20 border-destructive/40'
-                    }`}>
-                      {p.soddisfatto
-                        ? <Check className="w-3 h-3 text-white" />
-                        : <X className="w-3 h-3 text-destructive" />}
+                    {/* Riga icona + label */}
+                    <div className="flex items-center gap-3">
+                      <div className={`w-5 h-5 rounded flex items-center justify-center shrink-0 border transition-colors ${
+                        p.soddisfatto ? 'bg-success border-success' : 'bg-destructive/20 border-destructive/40'
+                      }`}>
+                        {p.soddisfatto
+                          ? <Check className="w-3 h-3 text-white" />
+                          : <X className="w-3 h-3 text-destructive" />}
+                      </div>
+                      <span className="text-sm font-medium">{p.label}</span>
+                      {/* Toggle inline (proforma_emessa / documenti_ricevuti) */}
+                      {!p.soddisfatto && p.editType === 'toggle' && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="ml-auto h-7 px-2.5 text-xs text-primary border border-primary/30 hover:bg-primary/10 shrink-0"
+                          disabled={inlineSave.isPending}
+                          onClick={() => inlineSave.mutate({ [p.fieldName!]: true } as Parameters<typeof inlineSave.mutate>[0])}
+                        >
+                          {inlineSave.isPending
+                            ? <Loader2 className="w-3 h-3 animate-spin" />
+                            : p.actionLabel ?? 'Segna ✓'}
+                        </Button>
+                      )}
                     </div>
-                    <span className="text-sm font-medium">{p.label}</span>
+                    {/* Input data inline (data_verifica) */}
+                    {!p.soddisfatto && p.editType === 'date' && (
+                      <div className="flex items-center gap-2 pl-8">
+                        <input
+                          type="date"
+                          value={dateValue}
+                          onChange={e => setDateValue(e.target.value)}
+                          className="h-7 px-2 rounded-md border border-border bg-background text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                        />
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 px-2.5 text-xs text-primary border border-primary/30 hover:bg-primary/10"
+                          disabled={!dateValue || inlineSave.isPending}
+                          onClick={() => inlineSave.mutate({ data_verifica: dateValue })}
+                        >
+                          {inlineSave.isPending
+                            ? <Loader2 className="w-3 h-3 animate-spin" />
+                            : 'Salva'}
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
