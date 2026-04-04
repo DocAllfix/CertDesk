@@ -9,13 +9,14 @@
  *   - Delete con conferma (solo admin o chi ha caricato)
  *   - Upload drag-and-drop con barra di avanzamento animata
  */
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useRef } from 'react'
 import { FileText, Download, Upload, X, CheckCircle2, Loader2, ImageIcon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { FileUpload } from './FileUpload'
+import { FileUpload, type FileUploadHandle } from './FileUpload'
 import { useAllegatiPratica, useUploadAllegato, useDeleteAllegato } from '@/hooks/useAllegati'
 import { downloadAllegato } from '@/lib/storage/allegati'
 import { useAuth } from '@/hooks/useAuth'
+import { toast } from 'sonner'
 import { format } from 'date-fns'
 import { it } from 'date-fns/locale'
 import type { AllegatoConCaricatoDa } from '@/types/app.types'
@@ -68,6 +69,7 @@ export function AllegatiSection({ praticaId }: AllegatiSectionProps) {
   const { data: allegati = [], isLoading } = useAllegatiPratica(praticaId)
   const uploadMutation = useUploadAllegato(praticaId)
   const deleteMutation = useDeleteAllegato(praticaId)
+  const fileUploadRef = useRef<FileUploadHandle>(null)
 
   const [uploadingFiles, setUploadingFiles] = useState<UploadingFile[]>([])
   const [downloadingId, setDownloadingId] = useState<string | null>(null)
@@ -129,8 +131,8 @@ export function AllegatiSection({ praticaId }: AllegatiSectionProps) {
       document.body.appendChild(a)
       a.click()
       document.body.removeChild(a)
-    } catch {
-      // errore silenzioso — l'utente vedrà che nulla si è aperto
+    } catch (err) {
+      toast.error('Impossibile scaricare il file. Riprova.')
     } finally {
       setDownloadingId(null)
     }
@@ -165,7 +167,7 @@ export function AllegatiSection({ praticaId }: AllegatiSectionProps) {
             size="sm"
             variant="ghost"
             className="h-7 text-xs gap-1"
-            onClick={() => document.getElementById(`upload-trigger-${praticaId}`)?.click()}
+            onClick={() => fileUploadRef.current?.triggerPicker()}
             disabled={uploadMutation.isPending}
           >
             {uploadMutation.isPending ? (
@@ -180,21 +182,9 @@ export function AllegatiSection({ praticaId }: AllegatiSectionProps) {
 
       {/* Drop zone — evalisdesk-ref pattern */}
       <FileUpload
+        ref={fileUploadRef}
         onFilesSelected={handleFilesSelected}
         disabled={uploadMutation.isPending}
-      />
-
-      {/* Input trigger nascosto per il bottone header */}
-      <input
-        id={`upload-trigger-${praticaId}`}
-        type="file"
-        multiple
-        className="hidden"
-        onChange={(e) => {
-          if (e.target.files) handleFilesSelected(Array.from(e.target.files))
-          e.target.value = ''
-        }}
-        accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.jpg,.jpeg,.png,.webp,.zip,.txt"
       />
 
       {/* Lista allegati + uploading in corso */}

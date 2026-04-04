@@ -6,8 +6,11 @@
  * Validazione client:
  *   - Max 50 MB per file
  *   - Tipi ammessi: PDF, Word, Excel, PowerPoint, immagini, ZIP, testo
+ *
+ * Espone { triggerPicker } via forwardRef per permettere al componente
+ * padre di aprire il file picker (es. bottone "Carica" nell'header).
  */
-import { useRef, useState } from 'react'
+import { useRef, useState, forwardRef, useImperativeHandle } from 'react'
 import { Upload } from 'lucide-react'
 
 // ── Costanti ──────────────────────────────────────────────────────
@@ -55,13 +58,22 @@ function validateFile(file: File): string | null {
 export interface FileUploadProps {
   onFilesSelected: (files: File[]) => void
   disabled?: boolean
-  accept?: string
+}
+
+export interface FileUploadHandle {
+  /** Apre il file picker — usato dal bottone "Carica" esterno. */
+  triggerPicker: () => void
 }
 
 // ── Componente ────────────────────────────────────────────────────
 
-export function FileUpload({ onFilesSelected, disabled = false }: FileUploadProps) {
+export const FileUpload = forwardRef<FileUploadHandle, FileUploadProps>(
+function FileUpload({ onFilesSelected, disabled = false }, ref) {
   const inputRef = useRef<HTMLInputElement>(null)
+
+  useImperativeHandle(ref, () => ({
+    triggerPicker: () => { if (!disabled) inputRef.current?.click() },
+  }))
   const [dragging, setDragging] = useState(false)
   const [errors, setErrors] = useState<string[]>([])
 
@@ -136,4 +148,4 @@ export function FileUpload({ onFilesSelected, disabled = false }: FileUploadProp
       )}
     </div>
   )
-}
+})
