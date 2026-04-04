@@ -10,6 +10,7 @@
  */
 import { useState } from 'react'
 import { useSearchParams, useNavigate } from 'react-router-dom'
+import { format, addDays } from 'date-fns'
 import {
   Plus, Search, Filter, ArrowUpDown, Loader2,
 } from 'lucide-react'
@@ -170,7 +171,13 @@ export default function PratichePage() {
   const norma     = searchParams.get('norma')
   const stato     = searchParams.get('stato')     as StatoPraticaType | null
   const assegnato = searchParams.get('assegnato')
+  const scadenze  = searchParams.get('scadenze')  // 'critiche' → scadenza ≤ +15gg
   const pagina    = Math.max(1, parseInt(searchParams.get('pagina') ?? '1', 10))
+
+  // scadenze=critiche → filtra pratiche con data_scadenza entro 15 giorni
+  const scadenzaMax = scadenze === 'critiche'
+    ? format(addDays(new Date(), 15), 'yyyy-MM-dd')
+    : null
 
   // ── Helper aggiornamento URL ──────────────────────────────────
   const setParam = (key: string, value: string | null) => {
@@ -196,14 +203,15 @@ export default function PratichePage() {
 
   // ── Build filtri query ────────────────────────────────────────
   const filtriQuery: FiltriPratiche = {
-    ...(ricerca   ? { ricerca }                     : {}),
+    ...(ricerca      ? { ricerca }                     : {}),
     ...(tab === 'completate'
           ? { fase: 'completata' as FaseType }
           : fase ? { fase } : {}),
-    ...(ciclo     ? { ciclo }                       : {}),
-    ...(norma     ? { norma_codice: norma }         : {}),
-    ...(stato     ? { stato }                       : {}),
-    ...(assegnato ? { assegnato_a: assegnato }      : {}),
+    ...(ciclo        ? { ciclo }                       : {}),
+    ...(norma        ? { norma_codice: norma }         : {}),
+    ...(stato        ? { stato }                       : {}),
+    ...(assegnato    ? { assegnato_a: assegnato }      : {}),
+    ...(scadenzaMax  ? { scadenza_max: scadenzaMax }   : {}),
   }
 
   const { data: rawData = [], isLoading, error } = usePratiche(filtriQuery)
