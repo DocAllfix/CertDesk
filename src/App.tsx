@@ -10,7 +10,8 @@ import ClientiPage from '@/pages/database/ClientiPage'
 import ConsulentiPage from '@/pages/database/ConsulentiPage'
 import PratichePage from '@/pages/pratiche/PratichePage'
 import PraticaDettaglioPage from '@/pages/pratiche/PraticaDettaglioPage'
-import PipelinePage from '@/pages/pipeline/PipelinePage'
+import PipelinePage    from '@/pages/pipeline/PipelinePage'
+import DashboardPage   from '@/pages/dashboard/DashboardPage'
 
 // ── QueryClient ──────────────────────────────────────────────────
 
@@ -76,7 +77,7 @@ export default function App() {
                 <Route index element={<Navigate to="/dashboard" replace />} />
 
                 {/* Pagine principali */}
-                <Route path="dashboard" element={<Placeholder name="DashboardPage" />} />
+                <Route path="dashboard" element={<DashboardPage />} />
                 <Route path="pratiche" element={<PratichePage />} />
                 <Route path="pratiche/:id" element={<PraticaDettaglioPage />} />
                 <Route path="pipeline" element={<PipelinePage />} />
