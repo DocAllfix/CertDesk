@@ -28,7 +28,7 @@ import { AvanzaFaseModal }       from './AvanzaFaseModal'
 import { BloccoDocumentiAlert }  from './BloccoDocumentiAlert'
 import { StatoPraticaBanner }    from './StatoPraticaBanner'
 import { AllegatiSection }       from '@/components/allegati'
-import { CommunicationFeed }    from './CommunicationFeed'
+import { FeedPratica }          from './FeedPratica'
 
 import type { PraticaConRelazioni, FaseType } from '@/types/app.types'
 
@@ -383,7 +383,7 @@ export function PraticaDettaglio({ pratica }: PraticaDettaglioProps) {
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-5">
         <div className="lg:col-span-3 space-y-5">
           {renderInfoSection()}
-          <CommunicationFeed praticaId={pratica.id} />
+          <FeedPratica praticaId={pratica.id} />
         </div>
         <div className="lg:col-span-2 space-y-5">
           {renderAssegnazionePanel()}

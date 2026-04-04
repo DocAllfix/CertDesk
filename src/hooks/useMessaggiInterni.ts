@@ -90,9 +90,10 @@ export function useMessaggiPratica(praticaId: string | undefined) {
 // ── Mutation: invia messaggio ─────────────────────────────────────
 
 interface SendMessaggioParams {
-  testo:          string
-  tipo:           MessaggioTipo
+  testo:           string
+  tipo:            MessaggioTipo
   destinatarioId?: string | null
+  allegatoId?:     string | null
 }
 
 export function useSendMessaggio(praticaId: string) {
@@ -104,10 +105,11 @@ export function useSendMessaggio(praticaId: string) {
       if (!user?.id) throw new Error('Utente non autenticato')
       return createMessaggio({
         praticaId,
-        autoreId:      user.id,
-        testo:         params.testo,
-        tipo:          params.tipo,
+        autoreId:       user.id,
+        testo:          params.testo,
+        tipo:           params.tipo,
         destinatarioId: params.destinatarioId,
+        allegatoId:     params.allegatoId,
       })
     },
     onSuccess: () => {

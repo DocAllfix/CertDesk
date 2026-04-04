@@ -1,14 +1,20 @@
 /**
- * Query layer Supabase per messaggi_interni.
+ * Query layer Supabase per messaggi_interni e storico_fasi (feed pratica).
  *
- * getMessaggiPratica  — lista con join autore + destinatario + allegato
- * createMessaggio     — insert messaggio + notifiche automatiche al destinatario
- * markMessaggioLetto  — aggiunge userId all'array letto_da
- * getTeamMembers      — utenti attivi per il select destinatario
+ * getMessaggiPratica     — lista messaggi con join autore + destinatario + allegato
+ * getStoricoFasiPratica  — eventi sistema dal log immutabile (storico_fasi)
+ * createMessaggio        — insert messaggio + notifiche automatiche
+ * markMessaggioLetto     — aggiunge userId all'array letto_da
+ * getTeamMembers         — utenti attivi per select destinatario
  */
 import { supabase } from '@/lib/supabase'
 import type { Inserts } from '@/lib/supabase'
-import type { MessaggioConRelazioni, MessaggioTipo, UserProfile } from '@/types/app.types'
+import type {
+  MessaggioConRelazioni,
+  MessaggioTipo,
+  StoricoFaseConUtente,
+  UserProfile,
+} from '@/types/app.types'
 
 export type InsertMessaggio = Inserts<'messaggi_interni'>
 
@@ -30,27 +36,45 @@ export async function getMessaggiPratica(praticaId: string): Promise<MessaggioCo
   return (data ?? []) as MessaggioConRelazioni[]
 }
 
+// ── Storico fasi (eventi sistema) ─────────────────────────────────
+
+export async function getStoricoFasiPratica(praticaId: string): Promise<StoricoFaseConUtente[]> {
+  const { data, error } = await supabase
+    .from('storico_fasi')
+    .select(`
+      *,
+      cambiato_da_profile:user_profiles!storico_fasi_cambiato_da_fkey(id, nome, cognome)
+    `)
+    .eq('pratica_id', praticaId)
+    .order('created_at', { ascending: true })
+
+  if (error) throw new Error(`Errore nel caricamento dello storico fasi: ${error.message}`)
+  return (data ?? []) as StoricoFaseConUtente[]
+}
+
 // ── Crea messaggio + notifiche ─────────────────────────────────────
 
 interface CreateMessaggioParams {
-  praticaId: string
-  autoreId: string
-  testo: string
-  tipo: MessaggioTipo
+  praticaId:      string
+  autoreId:       string
+  testo:          string
+  tipo:           MessaggioTipo
   destinatarioId?: string | null
+  allegatoId?:    string | null
 }
 
 export async function createMessaggio(params: CreateMessaggioParams): Promise<void> {
-  const { praticaId, autoreId, testo, tipo, destinatarioId } = params
+  const { praticaId, autoreId, testo, tipo, destinatarioId, allegatoId } = params
 
   const { error: msgError } = await supabase
     .from('messaggi_interni')
     .insert({
-      pratica_id:     praticaId,
-      autore_id:      autoreId,
+      pratica_id:      praticaId,
+      autore_id:       autoreId,
       testo,
       tipo,
       destinatario_id: destinatarioId ?? null,
+      allegato_id:     allegatoId ?? null,
       letto_da:        [autoreId],
     })
 
@@ -72,8 +96,7 @@ export async function createMessaggio(params: CreateMessaggioParams): Promise<vo
     if (error) console.error('Errore notifica richiesta:', error.message)
 
   } else if ((tipo === 'richiesta' || tipo === 'commento') && !destinatarioId) {
-    // Notifica a tutti gli utenti attivi tranne l'autore
-    // (sia commento generico che richiesta broadcast a "Tutti")
+    // Broadcast: notifica a tutti gli utenti attivi tranne l'autore
     const titoloNotifica = tipo === 'richiesta' ? 'Nuova richiesta' : 'Nuovo commento'
     const tipoNotifica   = tipo === 'richiesta' ? 'richiesta' : 'info'
 
@@ -122,10 +145,10 @@ export async function markMessaggioLetto(messaggioId: string, userId: string): P
     .eq('id', messaggioId)
     .single()
 
-  if (readError || data === null) return   // record non trovato — ignora silenziosamente
+  if (readError || data === null) return
 
   const lettoDa = data.letto_da ?? []
-  if (lettoDa.includes(userId)) return    // già segnato come letto
+  if (lettoDa.includes(userId)) return
 
   const { error } = await supabase
     .from('messaggi_interni')
