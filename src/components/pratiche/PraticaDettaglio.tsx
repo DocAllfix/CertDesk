@@ -28,6 +28,7 @@ import { AvanzaFaseModal }       from './AvanzaFaseModal'
 import { BloccoDocumentiAlert }  from './BloccoDocumentiAlert'
 import { StatoPraticaBanner }    from './StatoPraticaBanner'
 import { AllegatiSection }       from '@/components/allegati'
+import { PromemoriaSection }    from './PromemoriaSection'
 import { FeedPratica }          from './FeedPratica'
 
 import type { PraticaConRelazioni, FaseType } from '@/types/app.types'
@@ -389,6 +390,7 @@ export function PraticaDettaglio({ pratica }: PraticaDettaglioProps) {
           {renderAssegnazionePanel()}
           {renderChecklist()}
           <AllegatiSection praticaId={pratica.id} />
+          <PromemoriaSection praticaId={pratica.id} />
         </div>
       </div>
 

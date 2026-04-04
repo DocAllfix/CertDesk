@@ -13,6 +13,7 @@ import PraticaDettaglioPage from '@/pages/pratiche/PraticaDettaglioPage'
 import PipelinePage    from '@/pages/pipeline/PipelinePage'
 import DashboardPage   from '@/pages/dashboard/DashboardPage'
 import ScadenzePage    from '@/pages/scadenze/ScadenzePage'
+import PromemoriaPage  from '@/pages/database/PromemoriaPage'
 
 // ── QueryClient ──────────────────────────────────────────────────
 
@@ -88,7 +89,7 @@ export default function App() {
                 <Route path="database/clienti" element={<ClientiPage />} />
                 <Route path="database/consulenti" element={<ConsulentiPage />} />
                 <Route path="database/archivio" element={<Placeholder name="ArchivioPratiche" />} />
-                <Route path="promemoria" element={<Placeholder name="PromemoriaPage" />} />
+                <Route path="promemoria" element={<PromemoriaPage />} />
 
                 {/* Fallback */}
                 <Route path="*" element={<Navigate to="/dashboard" replace />} />
