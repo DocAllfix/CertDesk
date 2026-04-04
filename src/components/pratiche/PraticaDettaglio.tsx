@@ -422,8 +422,8 @@ export function PraticaDettaglio({ pratica }: PraticaDettaglioProps) {
         pratica={pratica}
       />
 
-      {/* Modal avanzamento fase con prerequisiti reali */}
-      {faseNext && (
+      {/* Modal avanzamento fase con prerequisiti reali — lazy mount */}
+      {faseNext && avanzaOpen && (
         <AvanzaFaseModal
           open={avanzaOpen}
           onClose={() => setAvanzaOpen(false)}

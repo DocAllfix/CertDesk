@@ -19,7 +19,7 @@
  */
 import { useState } from 'react'
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle,
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
 } from '@/components/ui/dialog'
 import { Button }    from '@/components/ui/button'
 import { Textarea }  from '@/components/ui/textarea'
@@ -162,6 +162,11 @@ export function AvanzaFaseModal({ open, onClose, pratica, targetFase }: AvanzaFa
           <DialogTitle className="text-base font-poppins">
             {isRetrocessione ? 'Retrocedi fase' : 'Avanza fase'}
           </DialogTitle>
+          <DialogDescription className="sr-only">
+            {isRetrocessione
+              ? 'Conferma la retrocessione della pratica alla fase precedente'
+              : 'Conferma l\'avanzamento della pratica alla fase successiva'}
+          </DialogDescription>
         </DialogHeader>
 
         <div className="px-6 py-5 space-y-4">
