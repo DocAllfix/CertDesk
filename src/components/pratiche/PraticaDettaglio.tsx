@@ -14,7 +14,7 @@ import { Link } from 'react-router-dom'
 import {
   ArrowLeft, ChevronRight, Sparkles, Check,
   User, Calendar, MapPin,
-  Building2, FileText, Phone, Mail, MessageSquare, Paperclip,
+  Building2, FileText, Phone, Mail, MessageSquare,
 } from 'lucide-react'
 import { format } from 'date-fns'
 import { it } from 'date-fns/locale'
@@ -27,6 +27,7 @@ import { PraticaModal }          from './PraticaModal'
 import { AvanzaFaseModal }       from './AvanzaFaseModal'
 import { BloccoDocumentiAlert }  from './BloccoDocumentiAlert'
 import { StatoPraticaBanner }    from './StatoPraticaBanner'
+import { AllegatiSection }       from '@/components/allegati'
 
 import type { PraticaConRelazioni, FaseType } from '@/types/app.types'
 
@@ -377,19 +378,6 @@ export function PraticaDettaglio({ pratica }: PraticaDettaglioProps) {
     )
   }
 
-  // ── Colonna destra: Allegati placeholder F7 ───────────────────
-
-  const renderAllegatiPlaceholder = () => (
-    <div className="bg-card rounded-xl border border-border overflow-hidden">
-      <div className="px-5 py-4 border-b border-border flex items-center gap-2">
-        <Paperclip className="w-4 h-4 text-muted-foreground" />
-        <h3 className="font-semibold text-foreground">Allegati</h3>
-      </div>
-      <div className="p-6 text-center">
-        <p className="text-sm text-muted-foreground">Gestione allegati — implementazione in F7</p>
-      </div>
-    </div>
-  )
 
   // ── Render principale ─────────────────────────────────────────
 
@@ -412,7 +400,7 @@ export function PraticaDettaglio({ pratica }: PraticaDettaglioProps) {
         <div className="lg:col-span-2 space-y-5">
           {renderAssegnazionePanel()}
           {renderChecklist()}
-          {renderAllegatiPlaceholder()}
+          <AllegatiSection praticaId={pratica.id} />
         </div>
       </div>
 

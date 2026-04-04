@@ -1,2 +1,2 @@
-// Allegati components: AllegatiSection, FileUpload
-export {}
+export { AllegatiSection } from './AllegatiSection'
+export { FileUpload }      from './FileUpload'
