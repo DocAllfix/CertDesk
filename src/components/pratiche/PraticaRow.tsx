@@ -8,7 +8,7 @@
  * Design ref: ../evalisdesk-ref/src/pages/Pratiche.jsx (tabella rows)
  */
 import { Link } from 'react-router-dom'
-import { ExternalLink, Pencil, ChevronRight, PauseCircle, XCircle, MoreHorizontal, Sparkles, Check } from 'lucide-react'
+import { ExternalLink, Pencil, ChevronRight, PauseCircle, XCircle, MoreHorizontal, Sparkles, Check, Archive } from 'lucide-react'
 import { differenceInDays, parseISO } from 'date-fns'
 
 import { BadgeFase } from '@/components/shared/BadgeFase'
@@ -35,6 +35,7 @@ interface PraticaRowProps {
   onAvanza?:  (pratica: PraticaListItem) => void
   onSospendi?: (pratica: PraticaListItem) => void
   onAnnulla?:  (pratica: PraticaListItem) => void
+  onArchivia?: (pratica: PraticaListItem) => void
 }
 
 // ── Helpers ───────────────────────────────────────────────────────
@@ -97,6 +98,7 @@ export function PraticaRow({
   onAvanza,
   onSospendi,
   onAnnulla,
+  onArchivia,
 }: PraticaRowProps) {
   const urgente = isUrgente(pratica.data_scadenza)
 
@@ -251,6 +253,19 @@ export function PraticaRow({
                       Annulla
                     </DropdownMenuItem>
                   )}
+                </>
+              )}
+
+              {onArchivia && pratica.fase === 'completata' && (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onClick={() => onArchivia(pratica)}
+                    className="gap-2 cursor-pointer"
+                  >
+                    <Archive className="w-3.5 h-3.5" />
+                    Archivia
+                  </DropdownMenuItem>
                 </>
               )}
             </DropdownMenuContent>

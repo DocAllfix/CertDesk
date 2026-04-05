@@ -24,7 +24,7 @@ import {
 import { PraticaRow }   from '@/components/pratiche/PraticaRow'
 import { PraticaModal } from '@/components/pratiche/PraticaModal'
 
-import { usePratiche, useSospendiPratica } from '@/hooks/usePratiche'
+import { usePratiche, useSospendiPratica, useArchiviaPratica } from '@/hooks/usePratiche'
 import { usePratica }      from '@/hooks/usePratiche'
 import { useTeamMembers }  from '@/hooks/useTeamMembers'
 import { useAuth }         from '@/hooks/useAuth'
@@ -216,6 +216,7 @@ export default function PratichePage() {
 
   const { data: rawData = [], isLoading, error } = usePratiche(filtriQuery)
   const sospendiMut = useSospendiPratica()
+  const archiviaMut = useArchiviaPratica()
 
   // ── Trasformazione + client-filter ───────────────────────────
   const praticheRaw = rawData as unknown as PraticaListRaw[]
@@ -253,6 +254,15 @@ export default function PratichePage() {
   const handleAnnulla = async (p: PraticaListItem) => {
     // Implementazione completa con modal motivo prevista in F6
     navigate(`/pratiche/${p.id}`)
+  }
+
+  const handleArchivia = async (p: PraticaListItem) => {
+    if (!window.confirm(`Archiviare la pratica ${p.numero_pratica ?? p.id}? Sarà spostata nell'archivio.`)) return
+    try {
+      await archiviaMut.mutateAsync(p.id)
+    } catch (err) {
+      alert((err as Error).message)
+    }
   }
 
   // ── Render ────────────────────────────────────────────────────
@@ -460,6 +470,7 @@ export default function PratichePage() {
                     onAvanza={handleAvanza}
                     onSospendi={handleSospendi}
                     onAnnulla={handleAnnulla}
+                    onArchivia={handleArchivia}
                   />
                 ))}
               </tbody>

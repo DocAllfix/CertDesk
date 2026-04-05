@@ -14,6 +14,7 @@ import PipelinePage    from '@/pages/pipeline/PipelinePage'
 import DashboardPage   from '@/pages/dashboard/DashboardPage'
 import ScadenzePage    from '@/pages/scadenze/ScadenzePage'
 import PromemoriaPage  from '@/pages/database/PromemoriaPage'
+import ArchivioPage    from '@/pages/database/ArchivioPage'
 
 // ── QueryClient ──────────────────────────────────────────────────
 
@@ -25,17 +26,6 @@ const queryClient = new QueryClient({
     },
   },
 })
-
-// ── Placeholder pagine — sostituiti nelle fasi F3–F11 ────────────
-
-function Placeholder({ name }: { name: string }) {
-  return (
-    <div className="rounded-xl border border-border bg-card p-8 space-y-2">
-      <p className="text-base font-semibold text-foreground">{name}</p>
-      <p className="text-sm text-muted-foreground">Implementazione in corso...</p>
-    </div>
-  )
-}
 
 // ── Protected Layout ─────────────────────────────────────────────
 // Usa Outlet: rende i children solo se autenticato, altrimenti
@@ -88,7 +78,7 @@ export default function App() {
                 {/* Database */}
                 <Route path="database/clienti" element={<ClientiPage />} />
                 <Route path="database/consulenti" element={<ConsulentiPage />} />
-                <Route path="database/archivio" element={<Placeholder name="ArchivioPratiche" />} />
+                <Route path="database/archivio" element={<ArchivioPage />} />
                 <Route path="promemoria" element={<PromemoriaPage />} />
 
                 {/* Fallback */}
