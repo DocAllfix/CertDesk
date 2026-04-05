@@ -25,8 +25,10 @@ export interface ExecuteAvanzaFaseParams {
   nuovaFase: FaseType
   /** UUID dell'utente che esegue l'azione */
   userId: string
-  /** Lista utenti attivi — serve per trovare admin per le notifiche */
-  allUsers: Pick<UserProfile, 'id' | 'ruolo'>[]
+  /** Lista utenti attivi — serve per trovare admin e nomi per le notifiche */
+  allUsers: Pick<UserProfile, 'id' | 'ruolo' | 'nome' | 'cognome'>[]
+  /** Nome cliente — per notifiche leggibili (es. "CERT-2026-0001 (Acme Srl)") */
+  clienteNome?: string
   /** Motivo opzionale (usato in storico_fasi) */
   motivo?: string
 }
@@ -40,7 +42,7 @@ export interface ExecuteAvanzaFaseParams {
  * @throws Error — messaggio dal trigger DB se la transizione è rifiutata
  */
 export async function executeAvanzaFase(params: ExecuteAvanzaFaseParams) {
-  const { praticaId, oldFase, nuovaFase, userId, allUsers, motivo } = params
+  const { praticaId, oldFase, nuovaFase, userId, allUsers, clienteNome, motivo } = params
 
   // 1. Update DB — il trigger validate_fase_transition valida tutto
   const updated = await avanzaFase(praticaId, nuovaFase, userId, motivo)
@@ -54,6 +56,7 @@ export async function executeAvanzaFase(params: ExecuteAvanzaFaseParams) {
       assegnato_a:        updated.assegnato_a,
       auditor_id:         updated.auditor_id,
       documenti_ricevuti: updated.documenti_ricevuti,
+      cliente_nome:       clienteNome,
     },
     oldFase,
     nuovaFase,

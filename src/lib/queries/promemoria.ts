@@ -69,6 +69,20 @@ export type CreatePromemoriaData = Pick<
 export async function createPromemoria(payload: CreatePromemoriaData): Promise<void> {
   const { error } = await supabase.from('promemoria').insert(payload)
   if (error) throw new Error(`Errore nella creazione del promemoria: ${error.message}`)
+
+  // Notifica all'assegnatario se diverso dal creatore — best-effort
+  if (payload.assegnato_a && payload.creato_da && payload.pratica_id && payload.assegnato_a !== payload.creato_da) {
+    const testoBreve = payload.testo.length > 100 ? `${payload.testo.slice(0, 100)}…` : payload.testo
+    await supabase.rpc('crea_notifica', {
+      p_destinatario_id: payload.assegnato_a,
+      p_pratica_id:      payload.pratica_id,
+      p_tipo:            'info' as const,
+      p_titolo:          'Nuovo promemoria assegnato',
+      p_messaggio:       testoBreve,
+    }).then(({ error: e }) => {
+      if (e) console.error('Errore notifica promemoria:', e.message)
+    })
+  }
 }
 
 /**

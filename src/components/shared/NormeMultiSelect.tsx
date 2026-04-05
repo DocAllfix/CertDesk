@@ -17,9 +17,10 @@ const ALL_NORME = [
 interface NormeMultiSelectProps {
   value: string[]
   onChange: (norme: string[]) => void
+  disabled?: boolean
 }
 
-export function NormeMultiSelect({ value, onChange }: NormeMultiSelectProps) {
+export function NormeMultiSelect({ value, onChange, disabled }: NormeMultiSelectProps) {
   const [search, setSearch] = useState('')
 
   const filtered = ALL_NORME.filter(
@@ -27,6 +28,7 @@ export function NormeMultiSelect({ value, onChange }: NormeMultiSelectProps) {
   )
 
   const toggle = (n: string) => {
+    if (disabled) return
     if (value.includes(n)) onChange(value.filter((v) => v !== n))
     else onChange([...value, n])
   }
@@ -34,7 +36,7 @@ export function NormeMultiSelect({ value, onChange }: NormeMultiSelectProps) {
   const isIntegrated = value.length > 1
 
   return (
-    <div className="space-y-2">
+    <div className={`space-y-2 ${disabled ? 'opacity-60' : ''}`}>
       {/* Tag selezionati */}
       {value.length > 0 && (
         <div className="flex flex-wrap gap-1.5">
@@ -44,13 +46,15 @@ export function NormeMultiSelect({ value, onChange }: NormeMultiSelectProps) {
               className="flex items-center gap-1 bg-primary/10 text-primary px-2.5 py-1 rounded-full text-xs font-medium border border-primary/20"
             >
               {n}
-              <button
-                type="button"
-                onClick={() => toggle(n)}
-                className="hover:text-destructive transition-colors ml-0.5 cursor-pointer"
-              >
-                <X className="w-3 h-3" />
-              </button>
+              {!disabled && (
+                <button
+                  type="button"
+                  onClick={() => toggle(n)}
+                  className="hover:text-destructive transition-colors ml-0.5 cursor-pointer"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              )}
             </span>
           ))}
         </div>
@@ -64,33 +68,36 @@ export function NormeMultiSelect({ value, onChange }: NormeMultiSelectProps) {
         </div>
       )}
 
-      {/* Ricerca */}
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
-        <Input
-          className="pl-8 text-sm h-8"
-          placeholder="Cerca norma..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
-      </div>
+      {/* Ricerca e opzioni — nascosti se disabled */}
+      {!disabled && (
+        <>
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+            <Input
+              className="pl-8 text-sm h-8"
+              placeholder="Cerca norma..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
 
-      {/* Opzioni disponibili */}
-      <div className="flex flex-wrap gap-1.5 max-h-32 overflow-y-auto">
-        {filtered.map((n) => (
-          <button
-            key={n}
-            type="button"
-            onClick={() => toggle(n)}
-            className="text-xs px-2.5 py-1 rounded-full border border-border bg-muted hover:bg-primary/10 hover:border-primary/30 hover:text-primary transition-colors cursor-pointer"
-          >
-            {n}
-          </button>
-        ))}
-        {filtered.length === 0 && search && (
-          <p className="text-xs text-muted-foreground/60 italic py-1">Nessuna norma trovata</p>
-        )}
-      </div>
+          <div className="flex flex-wrap gap-1.5 max-h-32 overflow-y-auto">
+            {filtered.map((n) => (
+              <button
+                key={n}
+                type="button"
+                onClick={() => toggle(n)}
+                className="text-xs px-2.5 py-1 rounded-full border border-border bg-muted hover:bg-primary/10 hover:border-primary/30 hover:text-primary transition-colors cursor-pointer"
+              >
+                {n}
+              </button>
+            ))}
+            {filtered.length === 0 && search && (
+              <p className="text-xs text-muted-foreground/60 italic py-1">Nessuna norma trovata</p>
+            )}
+          </div>
+        </>
+      )}
     </div>
   )
 }

@@ -89,13 +89,15 @@ export function useAvanzaFase() {
       nuovaFase,
       userId,
       allUsers,
+      clienteNome,
       motivo,
     }: {
       id: string
       oldFase: FaseType
       nuovaFase: FaseType
       userId: string
-      allUsers: Pick<UserProfile, 'id' | 'ruolo'>[]
+      allUsers: Pick<UserProfile, 'id' | 'ruolo' | 'nome' | 'cognome'>[]
+      clienteNome?: string
       motivo?: string
     }) => executeAvanzaFase({
       praticaId: id,
@@ -103,6 +105,7 @@ export function useAvanzaFase() {
       nuovaFase,
       userId,
       allUsers,
+      clienteNome,
       motivo,
     }),
     onSuccess: () => {

@@ -18,8 +18,8 @@
  * - notifiche.messaggio       (L316)
  * - user_profiles.ruolo       (L719) → user_role enum
  *
- * RPC `crea_notifica` Args (L746-754):
- *   p_destinatario_id, p_pratica_id, p_tipo, p_titolo, p_messaggio, p_mittente_id?
+ * RPC `crea_notifica` Args (5 params, migration 014):
+ *   p_destinatario_id, p_pratica_id, p_tipo, p_titolo, p_messaggio
  */
 
 import { supabase } from '@/lib/supabase'
@@ -65,30 +65,40 @@ async function inviaNotifica(n: NotificaDaCreare): Promise<void> {
  * @param allUsers  - Lista di tutti gli utenti attivi del sistema (per trovare admin)
  */
 export async function createFaseChangeNotifications(
-  pratica: Pick<Pratica, 'id' | 'numero_pratica' | 'assegnato_a' | 'auditor_id' | 'documenti_ricevuti'>,
+  pratica: Pick<Pratica, 'id' | 'numero_pratica' | 'assegnato_a' | 'auditor_id' | 'documenti_ricevuti'> & { cliente_nome?: string },
   _oldFase: FaseType,
   nuovaFase: FaseType,
   userId: string,
-  allUsers: Pick<UserProfile, 'id' | 'ruolo'>[]
+  allUsers: Pick<UserProfile, 'id' | 'ruolo' | 'nome' | 'cognome'>[]
 ): Promise<void> {
-  const notifiche: NotificaDaCreare[] = []
-  const np = pratica.numero_pratica ?? 'N/D'
+  const codice = pratica.numero_pratica ?? 'N/D'
+  const np = pratica.cliente_nome ? `${codice} (${pratica.cliente_nome})` : codice
   const faseLabel = FASE_LABELS[nuovaFase]
 
   // Admin = user_profiles con ruolo = 'admin'
   const admins = allUsers.filter(u => u.ruolo === 'admin')
 
+  // Nome dell'utente che ha effettuato l'avanzamento
+  const currentUser = allUsers.find(u => u.id === userId)
+  const nomeUtente = currentUser
+    ? `${currentUser.nome ?? ''} ${currentUser.cognome ?? ''}`.trim() || 'Utente'
+    : 'Utente'
+
+  // ── 1. Notifiche specifiche per fase (hanno precedenza) ────────
+  // Raccolte prima per sapere chi ha già una notifica specifica
+  const specifiche: NotificaDaCreare[] = []
+
   switch (nuovaFase) {
 
     // → Fase 2: Programmazione Verifica — notifica all'auditor
     case 'programmazione_verifica':
-      if (pratica.auditor_id) {
-        notifiche.push({
+      if (pratica.auditor_id && pratica.auditor_id !== userId) {
+        specifiche.push({
           destinatario_id: pratica.auditor_id,
           pratica_id:      pratica.id,
           tipo:            'info',
           titolo:          `Verifica da programmare — ${np}`,
-          messaggio:       `La pratica ${np} è avanzata a ${faseLabel}. Sei stato assegnato come auditor.`,
+          messaggio:       `${nomeUtente} ha avanzato la pratica ${np} a ${faseLabel}. Sei stato assegnato come auditor.`,
         })
       }
       break
@@ -96,20 +106,21 @@ export async function createFaseChangeNotifications(
     // → Fase 3: Richiesta Proforma — notifica admin
     case 'richiesta_proforma':
       for (const admin of admins) {
-        notifiche.push({
+        if (admin.id === userId) continue
+        specifiche.push({
           destinatario_id: admin.id,
           pratica_id:      pratica.id,
           tipo:            'info',
           titolo:          `Proforma richiesta — ${np}`,
-          messaggio:       `La pratica ${np} è avanzata a ${faseLabel}. È necessario emettere la proforma.`,
+          messaggio:       `${nomeUtente} ha avanzato la pratica ${np} a ${faseLabel}. È necessario emettere la proforma.`,
         })
       }
       break
 
     // → Fase 4: Elaborazione Pratica — warning se documenti mancanti
     case 'elaborazione_pratica':
-      if (!pratica.documenti_ricevuti && pratica.assegnato_a) {
-        notifiche.push({
+      if (!pratica.documenti_ricevuti && pratica.assegnato_a && pratica.assegnato_a !== userId) {
+        specifiche.push({
           destinatario_id: pratica.assegnato_a,
           pratica_id:      pratica.id,
           tipo:            'warning',
@@ -125,17 +136,15 @@ export async function createFaseChangeNotifications(
       if (pratica.assegnato_a) coinvoltiIds.add(pratica.assegnato_a)
       if (pratica.auditor_id)  coinvoltiIds.add(pratica.auditor_id)
       for (const admin of admins) coinvoltiIds.add(admin.id)
-
-      // Non notificare chi ha fatto l'azione
       coinvoltiIds.delete(userId)
 
       for (const destId of coinvoltiIds) {
-        notifiche.push({
+        specifiche.push({
           destinatario_id: destId,
           pratica_id:      pratica.id,
           tipo:            'info',
           titolo:          `Fase Firme — ${np}`,
-          messaggio:       `La pratica ${np} è avanzata a ${faseLabel}. Procedere con le firme.`,
+          messaggio:       `${nomeUtente} ha avanzato la pratica ${np} a ${faseLabel}. Procedere con le firme.`,
         })
       }
       break
@@ -146,25 +155,55 @@ export async function createFaseChangeNotifications(
       const destinatari = new Set<string>()
       if (pratica.assegnato_a) destinatari.add(pratica.assegnato_a)
       for (const admin of admins) destinatari.add(admin.id)
-
-      // Non notificare chi ha fatto l'azione
       destinatari.delete(userId)
 
       for (const destId of destinatari) {
-        notifiche.push({
+        specifiche.push({
           destinatario_id: destId,
           pratica_id:      pratica.id,
           tipo:            'success',
           titolo:          `Pratica completata — ${np}`,
-          messaggio:       `La pratica ${np} è stata completata con successo.`,
+          messaggio:       `La pratica ${np} è stata completata con successo da ${nomeUtente}.`,
         })
       }
       break
     }
   }
 
+  // ── 2. Notifica generica avanzamento fase ──────────────────────
+  // Inviata solo a chi NON ha già una notifica specifica per questa fase.
+  // Operatore avanza → notifica a responsabili/admin
+  // Responsabile/Admin avanza → notifica all'operatore assegnato
+  const destinatariSpecifici = new Set(specifiche.map(n => n.destinatario_id))
+  const generiche: NotificaDaCreare[] = []
+
+  if (currentUser?.ruolo === 'operatore') {
+    const responsabili = allUsers.filter(u => u.ruolo === 'admin' || u.ruolo === 'responsabile')
+    for (const resp of responsabili) {
+      if (resp.id === userId || destinatariSpecifici.has(resp.id)) continue
+      generiche.push({
+        destinatario_id: resp.id,
+        pratica_id:      pratica.id,
+        tipo:            'info',
+        titolo:          `Avanzamento fase — ${np}`,
+        messaggio:       `${nomeUtente} ha avanzato la pratica ${np} alla fase ${faseLabel}.`,
+      })
+    }
+  } else if (currentUser?.ruolo === 'admin' || currentUser?.ruolo === 'responsabile') {
+    if (pratica.assegnato_a && pratica.assegnato_a !== userId && !destinatariSpecifici.has(pratica.assegnato_a)) {
+      generiche.push({
+        destinatario_id: pratica.assegnato_a,
+        pratica_id:      pratica.id,
+        tipo:            'info',
+        titolo:          `Avanzamento fase — ${np}`,
+        messaggio:       `${nomeUtente} ha avanzato la pratica ${np} alla fase ${faseLabel}.`,
+      })
+    }
+  }
+
   // Invio parallelo — best-effort, errori silenziati
-  await Promise.allSettled(notifiche.map(inviaNotifica))
+  const tutteLeNotifiche = [...specifiche, ...generiche]
+  await Promise.allSettled(tutteLeNotifiche.map(inviaNotifica))
 }
 
 // ── Notifica documenti ricevuti in fase 4 ────────────────────────

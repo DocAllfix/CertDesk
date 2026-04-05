@@ -81,16 +81,6 @@ const FASE_BAR_COLORS: Record<FaseType, string> = {
   completata:              'bg-muted-foreground/30',
 }
 
-// Colori accent per le colonne kanban mini
-const FASE_ACCENT: Record<FaseType, string> = {
-  contratto_firmato:       'text-phase-1 bg-phase-1/10 border-phase-1/20',
-  programmazione_verifica: 'text-phase-2 bg-phase-2/10 border-phase-2/20',
-  richiesta_proforma:      'text-phase-3 bg-phase-3/10 border-phase-3/20',
-  elaborazione_pratica:    'text-phase-4 bg-phase-4/10 border-phase-4/20',
-  firme:                   'text-phase-5 bg-phase-5/10 border-phase-5/20',
-  completata:              'text-muted-foreground bg-muted border-border',
-}
-
 // ── Helpers ───────────────────────────────────────────────────────
 
 function getGreeting(): string {
@@ -113,7 +103,6 @@ function nomeCompleto(
 }
 
 function buildEventText(item: StoricoFaseConUtente): string {
-  const nome = nomeCompleto(item.cambiato_da_profile)
   if (!item.fase_precedente)
     return `ha creato la pratica in fase ${FASE_LABELS[item.fase_nuova]}`
   if (item.fase_nuova === 'completata')
@@ -193,7 +182,7 @@ function KpiCard({ title, value, icon: Icon, color, trend, trendLabel, href, loa
 
 export default function DashboardPage() {
   const navigate                            = useNavigate()
-  const { user, userProfile, isResponsabile } = useAuth()
+  const { user, userProfile } = useAuth()
 
   // ── Dati ──────────────────────────────────────────────────────
   const { data: stats, isLoading: loadingStats }       = useDashboardStats()

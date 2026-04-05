@@ -53,13 +53,16 @@ function fmtData(d: string | null | undefined): string {
 
 interface PromemoriaSectionProps {
   praticaId: string
+  /** UUID del titolare della pratica — il promemoria viene assegnato a questo utente.
+   *  Coerente con il trigger on_pratica_completata che usa NEW.assegnato_a. */
+  assegnatoA?: string | null
 }
 
 type Filtro = 'attivi' | 'completati'
 
 // ── Componente ────────────────────────────────────────────────────
 
-export function PromemoriaSection({ praticaId }: PromemoriaSectionProps) {
+export function PromemoriaSection({ praticaId, assegnatoA }: PromemoriaSectionProps) {
   const { user } = useAuth()
   const { data: items = [], isLoading } = usePromemoriaPerPratica(praticaId)
   const createMut = useCreatePromemoria()
@@ -82,7 +85,7 @@ export function PromemoriaSection({ praticaId }: PromemoriaSectionProps) {
       {
         pratica_id:    praticaId,
         creato_da:     user.id,
-        assegnato_a:   user.id,
+        assegnato_a:   assegnatoA ?? user.id,
         testo:         newTesto.trim(),
         data_scadenza: newDate || null,
       },

@@ -157,7 +157,11 @@ export async function getPratica(id: string): Promise<PraticaConRelazioni> {
     .eq('id', id)
     .single()
 
-  if (error) throw new Error(`Errore nel caricamento della pratica: ${error.message}`)
+  if (error) {
+    // PGRST116: .single() ha trovato 0 righe — pratica non esiste o non accessibile via RLS
+    if (error.code === 'PGRST116') throw new Error('Pratica non trovata')
+    throw new Error(`Errore nel caricamento della pratica: ${error.message}`)
+  }
   if (!data) throw new Error('Pratica non trovata')
 
   // Supabase non inferisce i tipi da stringhe select concatenate (restituisce GenericStringError).

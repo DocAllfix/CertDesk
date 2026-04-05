@@ -83,17 +83,18 @@ export async function createMessaggio(params: CreateMessaggioParams): Promise<vo
   // Notifiche automatiche — errori non bloccanti (log console)
   const testoBreve = testo.length > 100 ? `${testo.slice(0, 100)}…` : testo
 
-  if (tipo === 'richiesta' && destinatarioId) {
-    // Notifica 'richiesta' al destinatario esplicito
+  if ((tipo === 'richiesta' || tipo === 'commento') && destinatarioId) {
+    // Notifica al destinatario esplicito
+    const tipoNotifica = tipo === 'richiesta' ? 'richiesta' : 'info'
+    const titoloNotifica = tipo === 'richiesta' ? 'Nuova richiesta' : 'Nuovo commento'
     const { error } = await supabase.rpc('crea_notifica', {
       p_destinatario_id: destinatarioId,
       p_pratica_id:      praticaId,
-      p_tipo:            'richiesta',
-      p_titolo:          'Nuova richiesta',
+      p_tipo:            tipoNotifica,
+      p_titolo:          titoloNotifica,
       p_messaggio:       testoBreve,
-      p_mittente_id:     autoreId,
     })
-    if (error) console.error('Errore notifica richiesta:', error.message)
+    if (error) console.error(`Errore notifica ${tipo}:`, error.message)
 
   } else if ((tipo === 'richiesta' || tipo === 'commento') && !destinatarioId) {
     // Broadcast: notifica a tutti gli utenti attivi tranne l'autore
@@ -116,7 +117,6 @@ export async function createMessaggio(params: CreateMessaggioParams): Promise<vo
           p_tipo:            tipoNotifica,
           p_titolo:          titoloNotifica,
           p_messaggio:       testoBreve,
-          p_mittente_id:     autoreId,
         })
         if (error) console.error(`Errore notifica broadcast a ${u.id}:`, error.message)
       }
@@ -130,7 +130,6 @@ export async function createMessaggio(params: CreateMessaggioParams): Promise<vo
       p_tipo:            'info',
       p_titolo:          'Nuova risposta',
       p_messaggio:       testoBreve,
-      p_mittente_id:     autoreId,
     })
     if (error) console.error('Errore notifica risposta:', error.message)
   }

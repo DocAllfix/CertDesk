@@ -41,7 +41,7 @@ export const messaggiKeys = {
  * Restituisce i messaggi della pratica e mantiene un canale Realtime
  * che invalida la cache a ogni nuovo INSERT su messaggi_interni.
  *
- * Chiamato una sola volta nel componente che mostra il feed (CommunicationFeed).
+ * Chiamato una sola volta nel componente che mostra il feed (FeedPratica).
  */
 export function useMessaggiPratica(praticaId: string | undefined) {
   const qc         = useQueryClient()

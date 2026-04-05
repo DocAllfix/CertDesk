@@ -747,7 +747,6 @@ export type Database = {
         Args: {
           p_destinatario_id: string
           p_messaggio: string
-          p_mittente_id?: string
           p_pratica_id: string
           p_tipo: Database["public"]["Enums"]["notifica_tipo"]
           p_titolo: string

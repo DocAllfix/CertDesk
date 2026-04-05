@@ -390,7 +390,7 @@ export function PraticaDettaglio({ pratica }: PraticaDettaglioProps) {
           {renderAssegnazionePanel()}
           {renderChecklist()}
           <AllegatiSection praticaId={pratica.id} />
-          <PromemoriaSection praticaId={pratica.id} />
+          <PromemoriaSection praticaId={pratica.id} assegnatoA={pratica.assegnato_a} />
         </div>
       </div>
 

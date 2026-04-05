@@ -29,6 +29,7 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { NormeMultiSelect } from '@/components/shared/NormeMultiSelect'
 import { QuickAddCliente }  from '@/components/clienti/QuickAddCliente'
 
+import { useAuth }        from '@/hooks/useAuth'
 import { useClienti }     from '@/hooks/useClienti'
 import { useConsulenti }  from '@/hooks/useConsulenti'
 import { useTeamMembers } from '@/hooks/useTeamMembers'
@@ -101,6 +102,14 @@ const praticaSchema = z.object({
       path: ['consulente_id'],
     })
   }
+  // La data di verifica non può essere successiva alla scadenza della pratica
+  if (d.data_verifica && d.data_scadenza && d.data_verifica > d.data_scadenza) {
+    ctx.addIssue({
+      code: 'custom',
+      message: 'La data di verifica non può essere successiva alla scadenza della pratica',
+      path: ['data_verifica'],
+    })
+  }
 })
 
 export type PraticaFormValues = z.infer<typeof praticaSchema>
@@ -139,6 +148,11 @@ interface PraticaFormProps {
 export function PraticaForm({ pratica, onSuccess, onCancel }: PraticaFormProps) {
   const isEdit = !!pratica
   const fase   = pratica?.fase
+
+  const { userProfile } = useAuth()
+  const isOperatore = userProfile?.ruolo === 'operatore'
+  // In modifica, l'operatore può modificare solo i campi operativi (note, audit, flag fase)
+  const gestionaleDisabled = isEdit && isOperatore
 
   const { data: clienti    = [] } = useClienti()
   const { data: consulenti = [] } = useConsulenti()
@@ -257,8 +271,8 @@ export function PraticaForm({ pratica, onSuccess, onCancel }: PraticaFormProps) 
               control={control}
               name="cliente_id"
               render={({ field }) => (
-                <Select value={field.value} onValueChange={field.onChange}>
-                  <SelectTrigger className="cursor-pointer">
+                <Select value={field.value} onValueChange={field.onChange} disabled={isEdit && isOperatore}>
+                  <SelectTrigger className={isEdit && isOperatore ? 'opacity-60' : 'cursor-pointer'}>
                     <SelectValue placeholder="Seleziona cliente..." />
                   </SelectTrigger>
                   <SelectContent>
@@ -274,11 +288,13 @@ export function PraticaForm({ pratica, onSuccess, onCancel }: PraticaFormProps) 
             {errors.cliente_id && (
               <p className="text-xs text-destructive mt-1">{errors.cliente_id.message}</p>
             )}
-            <div className="mt-2">
-              <QuickAddCliente
-                onClienteCreato={(c) => setValue('cliente_id', c.id, { shouldValidate: true })}
-              />
-            </div>
+            {!gestionaleDisabled && (
+              <div className="mt-2">
+                <QuickAddCliente
+                  onClienteCreato={(c) => setValue('cliente_id', c.id, { shouldValidate: true })}
+                />
+              </div>
+            )}
           </div>
         </div>
 
@@ -292,8 +308,9 @@ export function PraticaForm({ pratica, onSuccess, onCancel }: PraticaFormProps) 
               <div className="flex gap-2 mb-3">
                 <button
                   type="button"
-                  onClick={() => field.onChange('consulente')}
-                  className={`flex-1 py-2 px-3 rounded-lg border text-sm font-medium transition-colors cursor-pointer ${
+                  onClick={() => !gestionaleDisabled && field.onChange('consulente')}
+                  disabled={gestionaleDisabled}
+                  className={`flex-1 py-2 px-3 rounded-lg border text-sm font-medium transition-colors ${gestionaleDisabled ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'} ${
                     field.value === 'consulente'
                       ? 'bg-primary/10 border-primary/40 text-primary'
                       : 'border-border text-muted-foreground hover:border-primary/30'
@@ -303,8 +320,9 @@ export function PraticaForm({ pratica, onSuccess, onCancel }: PraticaFormProps) 
                 </button>
                 <button
                   type="button"
-                  onClick={() => field.onChange('diretto')}
-                  className={`flex-1 py-2 px-3 rounded-lg border text-sm font-medium transition-colors cursor-pointer ${
+                  onClick={() => !gestionaleDisabled && field.onChange('diretto')}
+                  disabled={gestionaleDisabled}
+                  className={`flex-1 py-2 px-3 rounded-lg border text-sm font-medium transition-colors ${gestionaleDisabled ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'} ${
                     field.value === 'diretto'
                       ? 'bg-primary/10 border-primary/40 text-primary'
                       : 'border-border text-muted-foreground hover:border-primary/30'
@@ -323,8 +341,8 @@ export function PraticaForm({ pratica, onSuccess, onCancel }: PraticaFormProps) 
                 control={control}
                 name="consulente_id"
                 render={({ field }) => (
-                  <Select value={field.value ?? ''} onValueChange={(v) => field.onChange(v === '__none__' ? null : v || null)}>
-                    <SelectTrigger className="cursor-pointer">
+                  <Select value={field.value ?? ''} onValueChange={(v) => field.onChange(v === '__none__' ? null : v || null)} disabled={gestionaleDisabled}>
+                    <SelectTrigger className={gestionaleDisabled ? 'opacity-60' : 'cursor-pointer'}>
                       <SelectValue placeholder="Seleziona consulente..." />
                     </SelectTrigger>
                     <SelectContent>
@@ -347,6 +365,8 @@ export function PraticaForm({ pratica, onSuccess, onCancel }: PraticaFormProps) 
                 <Label className="text-sm font-medium mb-1.5 block">Nome Referente</Label>
                 <Input
                   placeholder="Mario Rossi"
+                  disabled={gestionaleDisabled}
+                  className={gestionaleDisabled ? 'opacity-60' : ''}
                   {...register('referente_nome')}
                 />
               </div>
@@ -355,6 +375,8 @@ export function PraticaForm({ pratica, onSuccess, onCancel }: PraticaFormProps) 
                 <Input
                   type="email"
                   placeholder="email@..."
+                  disabled={gestionaleDisabled}
+                  className={gestionaleDisabled ? 'opacity-60' : ''}
                   {...register('referente_email')}
                 />
                 {errors.referente_email && (
@@ -363,7 +385,7 @@ export function PraticaForm({ pratica, onSuccess, onCancel }: PraticaFormProps) 
               </div>
               <div>
                 <Label className="text-sm font-medium mb-1.5 block">Telefono</Label>
-                <Input placeholder="+39 ..." {...register('referente_tel')} />
+                <Input placeholder="+39 ..." disabled={gestionaleDisabled} className={gestionaleDisabled ? 'opacity-60' : ''} {...register('referente_tel')} />
               </div>
             </div>
           )}
@@ -381,7 +403,7 @@ export function PraticaForm({ pratica, onSuccess, onCancel }: PraticaFormProps) 
                 control={control}
                 name="norme"
                 render={({ field }) => (
-                  <NormeMultiSelect value={field.value} onChange={field.onChange} />
+                  <NormeMultiSelect value={field.value} onChange={field.onChange} disabled={gestionaleDisabled} />
                 )}
               />
               {errors.norme && (
@@ -397,8 +419,8 @@ export function PraticaForm({ pratica, onSuccess, onCancel }: PraticaFormProps) 
                 control={control}
                 name="ciclo"
                 render={({ field }) => (
-                  <Select value={field.value} onValueChange={field.onChange}>
-                    <SelectTrigger className="cursor-pointer">
+                  <Select value={field.value} onValueChange={field.onChange} disabled={gestionaleDisabled}>
+                    <SelectTrigger className={gestionaleDisabled ? 'opacity-60' : 'cursor-pointer'}>
                       <SelectValue placeholder="Seleziona..." />
                     </SelectTrigger>
                     <SelectContent>
@@ -426,8 +448,8 @@ export function PraticaForm({ pratica, onSuccess, onCancel }: PraticaFormProps) 
                 control={control}
                 name="assegnato_a"
                 render={({ field }) => (
-                  <Select value={field.value ?? ''} onValueChange={(v) => field.onChange(v === '__none__' ? null : v || null)}>
-                    <SelectTrigger className="cursor-pointer">
+                  <Select value={field.value ?? ''} onValueChange={(v) => field.onChange(v === '__none__' ? null : v || null)} disabled={gestionaleDisabled}>
+                    <SelectTrigger className={gestionaleDisabled ? 'opacity-60' : 'cursor-pointer'}>
                       <SelectValue placeholder="Seleziona utente..." />
                     </SelectTrigger>
                     <SelectContent>
@@ -444,7 +466,7 @@ export function PraticaForm({ pratica, onSuccess, onCancel }: PraticaFormProps) 
             </div>
             <div>
               <Label className="text-sm font-medium mb-1.5 block">Scadenza</Label>
-              <Input type="date" {...register('data_scadenza')} />
+              <Input type="date" disabled={gestionaleDisabled} className={gestionaleDisabled ? 'opacity-60' : ''} {...register('data_scadenza')} />
             </div>
           </div>
 
@@ -463,8 +485,9 @@ export function PraticaForm({ pratica, onSuccess, onCancel }: PraticaFormProps) 
                     <button
                       key={val}
                       type="button"
-                      onClick={() => field.onChange(val)}
-                      className={`flex-1 py-1.5 px-2 rounded-lg border text-xs font-medium transition-colors cursor-pointer ${
+                      onClick={() => !gestionaleDisabled && field.onChange(val)}
+                      disabled={gestionaleDisabled}
+                      className={`flex-1 py-1.5 px-2 rounded-lg border text-xs font-medium transition-colors ${gestionaleDisabled ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'} ${
                         field.value === val
                           ? val === 2
                             ? 'bg-destructive/10 border-destructive/40 text-destructive'
@@ -492,6 +515,9 @@ export function PraticaForm({ pratica, onSuccess, onCancel }: PraticaFormProps) 
                 <div>
                   <Label className="text-sm font-medium mb-1.5 block">Data Verifica</Label>
                   <Input type="date" {...register('data_verifica')} />
+                  {errors.data_verifica && (
+                    <p className="text-xs text-destructive mt-1">{errors.data_verifica.message}</p>
+                  )}
                 </div>
                 <div>
                   <Label className="text-sm font-medium mb-1.5 block">Auditor</Label>

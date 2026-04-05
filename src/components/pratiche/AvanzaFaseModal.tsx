@@ -133,6 +133,7 @@ export function AvanzaFaseModal({ open, onClose, pratica, targetFase }: AvanzaFa
   const [motivo,    setMotivo]    = useState('')
   const [dbError,   setDbError]   = useState<string | null>(null)
   const [dateValue, setDateValue] = useState('')
+  const dateInvalid = !!(dateValue && pratica.data_scadenza && dateValue > pratica.data_scadenza)
 
   // ── Mutation inline per prerequisiti ─────────────────────────
   // Usa updatePratica diretto + invalidateQueries(detail) — NON useUpdatePratica
@@ -168,7 +169,8 @@ export function AvanzaFaseModal({ open, onClose, pratica, targetFase }: AvanzaFa
         oldFase: pratica.fase,
         nuovaFase: targetFase,
         userId: user.id,
-        allUsers: team.map(t => ({ id: t.id, ruolo: t.ruolo })),
+        allUsers: team.map(t => ({ id: t.id, ruolo: t.ruolo, nome: t.nome, cognome: t.cognome })),
+        clienteNome: pratica.cliente?.nome ?? pratica.cliente?.ragione_sociale ?? undefined,
         motivo: motivo.trim() || undefined,
       },
       {
@@ -261,24 +263,31 @@ export function AvanzaFaseModal({ open, onClose, pratica, targetFase }: AvanzaFa
                     </div>
                     {/* Input data inline (data_verifica) */}
                     {!p.soddisfatto && p.editType === 'date' && (
-                      <div className="flex items-center gap-2 pl-8">
-                        <input
-                          type="date"
-                          value={dateValue}
-                          onChange={e => setDateValue(e.target.value)}
-                          className="h-7 px-2 rounded-md border border-border bg-background text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
-                        />
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-7 px-2.5 text-xs text-primary border border-primary/30 hover:bg-primary/10"
-                          disabled={!dateValue || inlineSave.isPending}
-                          onClick={() => inlineSave.mutate({ data_verifica: dateValue })}
-                        >
-                          {inlineSave.isPending
-                            ? <Loader2 className="w-3 h-3 animate-spin" />
-                            : 'Salva'}
-                        </Button>
+                      <div className="flex flex-col gap-1.5 pl-8">
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="date"
+                            value={dateValue}
+                            onChange={e => setDateValue(e.target.value)}
+                            className="h-7 px-2 rounded-md border border-border bg-background text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                          />
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 px-2.5 text-xs text-primary border border-primary/30 hover:bg-primary/10"
+                            disabled={!dateValue || dateInvalid || inlineSave.isPending}
+                            onClick={() => inlineSave.mutate({ data_verifica: dateValue })}
+                          >
+                            {inlineSave.isPending
+                              ? <Loader2 className="w-3 h-3 animate-spin" />
+                              : 'Salva'}
+                          </Button>
+                        </div>
+                        {dateInvalid && (
+                          <p className="text-xs text-destructive">
+                            La data di verifica non può essere successiva alla scadenza della pratica
+                          </p>
+                        )}
                       </div>
                     )}
                   </div>
