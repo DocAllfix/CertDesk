@@ -26,6 +26,7 @@ import { useSendMessaggio }   from '@/hooks/useMessaggiInterni'
 import { getTeamMembers }     from '@/lib/queries/messaggi'
 import { uploadAllegato }     from '@/lib/storage/allegati'
 import { useAuth }            from '@/hooks/useAuth'
+import { sanitizeText }       from '@/lib/validation'
 import type { MessaggioTipo } from '@/types/app.types'
 
 // ── Costanti ──────────────────────────────────────────────────────
@@ -98,8 +99,12 @@ export function InviaMessaggioForm({ praticaId }: InviaMessaggioFormProps) {
   // ── Invio ────────────────────────────────────────────────────────
 
   const handleSend = async () => {
-    const testoTrimmed = testo.trim()
+    const testoTrimmed = sanitizeText(testo)
     if (!testoTrimmed || submitting) return
+    if (testoTrimmed.length > 5000) {
+      toast.error('Il messaggio supera il limite di 5000 caratteri')
+      return
+    }
 
     setSubmitting(true)
 

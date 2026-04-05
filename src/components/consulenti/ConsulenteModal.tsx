@@ -5,7 +5,6 @@
 import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { z } from 'zod'
 import { Info } from 'lucide-react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
@@ -21,24 +20,16 @@ import {
   useConsulentiNorme,
   useSetConsulentiNorme,
 } from '@/hooks/useConsulenti'
+import { consulenteSchema, type ConsulenteFormValues, sanitizeTextOrNull } from '@/lib/validation'
 import type { Consulente } from '@/types/app.types'
 import type { InsertConsulente, UpdateConsulente } from '@/lib/queries/consulenti'
 
-// ── Schema Zod ────────────────────────────────────────────────────
+// Schema Zod importato da @/lib/validation (consulenteSchema)
 
-const consulenteSchema = z.object({
-  nome:     z.string().min(1, 'Nome obbligatorio'),
-  cognome:  z.string().optional(),
-  azienda:  z.string().optional(),
-  email:    z.string().optional(),
-  telefono: z.string().optional(),
-  note:     z.string().optional(),
-})
+type ConsulenteFormData = ConsulenteFormValues
 
-type ConsulenteFormData = z.infer<typeof consulenteSchema>
-
-function str(v: string | undefined): string | null {
-  return v && v.trim() !== '' ? v.trim() : null
+function str(v: string | null | undefined): string | null {
+  return sanitizeTextOrNull(v)
 }
 
 // ── Props ─────────────────────────────────────────────────────────

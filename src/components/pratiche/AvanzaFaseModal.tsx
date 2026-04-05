@@ -38,6 +38,7 @@ import { updatePratica }  from '@/lib/queries/pratiche'
 import { useTeamMembers } from '@/hooks/useTeamMembers'
 import { useAuth }        from '@/hooks/useAuth'
 
+import { sanitizeText } from '@/lib/validation'
 import type { PraticaConRelazioni, FaseType } from '@/types/app.types'
 
 // ── Prerequisiti per fase target ─────────────────────────────────
@@ -156,8 +157,10 @@ export function AvanzaFaseModal({ open, onClose, pratica, targetFase }: AvanzaFa
   const preValidazione = canAdvanceFase(pratica, targetFase)
 
   // Per retrocessione il motivo è obbligatorio
-  const motivoOk = isRetrocessione ? motivo.trim().length > 0 : true
-  const canProceed = preValidazione.canAdvance && motivoOk && !avanzaFase.isPending && !inlineSave.isPending
+  const motivoClean = sanitizeText(motivo)
+  const motivoOk = isRetrocessione ? motivoClean.length > 0 : true
+  const motivoTooLong = motivoClean.length > 2000
+  const canProceed = preValidazione.canAdvance && motivoOk && !motivoTooLong && !avanzaFase.isPending && !inlineSave.isPending
 
   function handleConfirm() {
     if (!user) return
@@ -171,7 +174,7 @@ export function AvanzaFaseModal({ open, onClose, pratica, targetFase }: AvanzaFa
         userId: user.id,
         allUsers: team.map(t => ({ id: t.id, ruolo: t.ruolo, nome: t.nome, cognome: t.cognome })),
         clienteNome: pratica.cliente?.nome ?? pratica.cliente?.ragione_sociale ?? undefined,
-        motivo: motivo.trim() || undefined,
+        motivo: motivoClean || undefined,
       },
       {
         onSuccess: () => {
@@ -318,6 +321,9 @@ export function AvanzaFaseModal({ open, onClose, pratica, targetFase }: AvanzaFa
               }
               className="resize-none h-20 text-sm"
             />
+            {motivoTooLong && (
+              <p className="text-xs text-destructive mt-1">Massimo 2000 caratteri</p>
+            )}
           </div>
 
           {/* Errore dal DB (trigger rifiuta) */}

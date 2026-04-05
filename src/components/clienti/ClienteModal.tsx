@@ -10,7 +10,6 @@
 import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { z } from 'zod'
 import { ChevronDown, ChevronRight } from 'lucide-react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
@@ -18,35 +17,19 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { useCreateCliente, useUpdateCliente, useDeleteCliente } from '@/hooks/useClienti'
+import { clienteSchema, type ClienteFormValues, sanitizeTextOrNull } from '@/lib/validation'
 import type { Cliente } from '@/types/app.types'
 import type { InsertCliente, UpdateCliente } from '@/lib/queries/clienti'
 
-// ── Schema Zod ────────────────────────────────────────────────────
+// Schema Zod importato da @/lib/validation (clienteSchema)
 // numero_dipendenti è trattato come stringa nel form e convertito
 // in onSubmit per evitare problemi con z.preprocess e i tipi resolver.
 
-const clienteSchema = z.object({
-  nome:              z.string().min(1, 'Nome obbligatorio'),
-  ragione_sociale:   z.string().optional(),
-  piva:              z.string().optional(),
-  codice_fiscale:    z.string().optional(),
-  email:             z.string().optional(),
-  pec:               z.string().optional(),
-  telefono:          z.string().optional(),
-  indirizzo:         z.string().optional(),
-  citta:             z.string().optional(),
-  cap:               z.string().optional(),
-  codice_ea:         z.string().optional(),
-  codice_nace:       z.string().optional(),
-  numero_dipendenti: z.string().optional(),
-  note:              z.string().optional(),
-})
+type ClienteFormData = ClienteFormValues
 
-type ClienteFormData = z.infer<typeof clienteSchema>
-
-// Helper: converte stringa vuota/undefined in null
-function str(v: string | undefined): string | null {
-  return v && v.trim() !== '' ? v.trim() : null
+// Helper: converte stringa vuota/undefined/null in null + sanitizza
+function str(v: string | null | undefined): string | null {
+  return sanitizeTextOrNull(v)
 }
 
 // ── Props ─────────────────────────────────────────────────────────

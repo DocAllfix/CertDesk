@@ -15,7 +15,6 @@
 import { useEffect } from 'react'
 import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { z } from 'zod'
 import { AlertTriangle, Sparkles } from 'lucide-react'
 
 import { Button }   from '@/components/ui/button'
@@ -36,6 +35,7 @@ import { useTeamMembers } from '@/hooks/useTeamMembers'
 import { useCreatePratica, useUpdatePratica } from '@/hooks/usePratiche'
 import { getResponsabilePerNorma } from '@/lib/queries/userProfiles'
 import { setPraticaNorme } from '@/lib/queries/pratiche'
+import { praticaSchema, type PraticaFormValues, sanitizeTextOrNull } from '@/lib/validation'
 
 import type { PraticaConRelazioni, FaseType, CicloType } from '@/types/app.types'
 
@@ -57,62 +57,7 @@ const CICLO_LABELS: Record<CicloType, string> = {
   ricertificazione:      'Ricertificazione',
 }
 
-// ── Schema Zod ────────────────────────────────────────────────────
-
-const praticaSchema = z.object({
-  cliente_id:   z.string().min(1, 'Seleziona un cliente'),
-  norme:        z.array(z.string()).min(1, 'Seleziona almeno una norma'),
-  ciclo:        z.enum(['certificazione', 'prima_sorveglianza', 'seconda_sorveglianza', 'ricertificazione'] as const),
-  tipo_contatto: z.enum(['consulente', 'diretto'] as const),
-
-  // Consulente (obbligatorio se tipo_contatto = 'consulente')
-  consulente_id: z.string().nullable().optional(),
-
-  // Referente diretto
-  referente_nome:  z.string().nullable().optional(),
-  referente_email: z.union([z.string().pipe(z.email('Email non valida')), z.literal(''), z.null()]).optional(),
-  referente_tel:   z.string().nullable().optional(),
-
-  // Assegnazione e scadenza
-  assegnato_a:  z.string().nullable().optional(),
-  data_scadenza: z.string().nullable().optional(),
-  note:          z.string().nullable().optional(),
-  priorita:      z.number().int().min(0).max(2),
-
-  // Fase 2+: programmazione_verifica e successive
-  auditor_id:    z.string().nullable().optional(),
-  data_verifica: z.string().nullable().optional(),
-  sede_verifica: z.string().nullable().optional(),
-
-  // Fase 3+: richiesta_proforma
-  proforma_richiesta: z.boolean().nullable().optional(),
-
-  // Fase 4: elaborazione_pratica
-  documenti_ricevuti: z.boolean().nullable().optional(),
-
-  // Fase completata
-  numero_certificato:           z.string().nullable().optional(),
-  data_emissione_certificato:   z.string().nullable().optional(),
-  data_scadenza_certificato:    z.string().nullable().optional(),
-}).superRefine((d, ctx) => {
-  if (d.tipo_contatto === 'consulente' && !d.consulente_id) {
-    ctx.addIssue({
-      code: 'custom',
-      message: 'Seleziona un consulente',
-      path: ['consulente_id'],
-    })
-  }
-  // La data di verifica non può essere successiva alla scadenza della pratica
-  if (d.data_verifica && d.data_scadenza && d.data_verifica > d.data_scadenza) {
-    ctx.addIssue({
-      code: 'custom',
-      message: 'La data di verifica non può essere successiva alla scadenza della pratica',
-      path: ['data_verifica'],
-    })
-  }
-})
-
-export type PraticaFormValues = z.infer<typeof praticaSchema>
+// Schema Zod importato da @/lib/validation (praticaSchema)
 
 // ── Helper ────────────────────────────────────────────────────────
 
@@ -234,13 +179,17 @@ export function PraticaForm({ pratica, onSuccess, onCancel }: PraticaFormProps) 
     const { norme, ...rest } = values
 
     // Normalizza: azzera i campi dell'altra modalità contatto + stringa vuota → null
+    // Sanitizza campi testo libero (DOMPurify — rimuove HTML injection)
     const isConsulente = rest.tipo_contatto === 'consulente'
     const finalPayload = {
       ...rest,
       consulente_id:   isConsulente ? (rest.consulente_id   ?? null) : null,
-      referente_nome:  isConsulente ? null                           : (rest.referente_nome  ?? null),
+      referente_nome:  isConsulente ? null                           : sanitizeTextOrNull(rest.referente_nome),
       referente_email: isConsulente ? null                           : (rest.referente_email || null),
       referente_tel:   isConsulente ? null                           : (rest.referente_tel   ?? null),
+      note:            sanitizeTextOrNull(rest.note),
+      sede_verifica:   sanitizeTextOrNull(rest.sede_verifica),
+      numero_certificato: sanitizeTextOrNull(rest.numero_certificato),
     }
 
     if (isEdit && pratica) {
