@@ -11,6 +11,7 @@ import { Input } from '@/components/ui/input'
 import { useAuth } from '@/hooks/useAuth'
 import { useTheme } from '@/hooks/useTheme'
 import { NotificheBadgeHeader } from '@/components/notifiche'
+import { APP_CONFIG } from '@/config/app.config'
 
 // ── Mappa path → titolo pagina ───────────────────────────────────────
 
@@ -30,7 +31,7 @@ function getPageTitle(pathname: string): string {
   if (PAGE_TITLES[pathname]) return PAGE_TITLES[pathname]
   // Pratica dettaglio: /pratiche/:id
   if (pathname.startsWith('/pratiche/')) return 'Dettaglio Pratica'
-  return 'CertDesk'
+  return APP_CONFIG.appName
 }
 
 // ── MiniAvatar ───────────────────────────────────────────────────────
