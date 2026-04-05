@@ -28,25 +28,25 @@ import { FASE_LABELS } from './fase-transitions'
 
 // ── Tipo interno ─────────────────────────────────────────────────
 
+// Fix F13.1: mittente_id rimosso — il DB lo imposta a auth.uid() via SECURITY DEFINER
 interface NotificaDaCreare {
   destinatario_id: string
   pratica_id: string
   tipo: NotificaTipo
   titolo: string
   messaggio: string
-  mittente_id?: string
 }
 
 // ── Helper: invia una singola notifica via RPC ───────────────────
 
 async function inviaNotifica(n: NotificaDaCreare): Promise<void> {
+  // Fix F13.1: p_mittente_id rimosso — il DB usa auth.uid() server-side
   await supabase.rpc('crea_notifica', {
     p_destinatario_id: n.destinatario_id,
     p_pratica_id:      n.pratica_id,
     p_tipo:            n.tipo,
     p_titolo:          n.titolo,
     p_messaggio:       n.messaggio,
-    ...(n.mittente_id ? { p_mittente_id: n.mittente_id } : {}),
   })
   // Best-effort: errori silenziati.
   // La tabella notifiche mostrerà cosa è stato creato.
@@ -89,7 +89,6 @@ export async function createFaseChangeNotifications(
           tipo:            'info',
           titolo:          `Verifica da programmare — ${np}`,
           messaggio:       `La pratica ${np} è avanzata a ${faseLabel}. Sei stato assegnato come auditor.`,
-          mittente_id:     userId,
         })
       }
       break
@@ -103,7 +102,6 @@ export async function createFaseChangeNotifications(
           tipo:            'info',
           titolo:          `Proforma richiesta — ${np}`,
           messaggio:       `La pratica ${np} è avanzata a ${faseLabel}. È necessario emettere la proforma.`,
-          mittente_id:     userId,
         })
       }
       break
@@ -117,7 +115,6 @@ export async function createFaseChangeNotifications(
           tipo:            'warning',
           titolo:          `Documenti mancanti — ${np}`,
           messaggio:       `La pratica ${np} è in fase ${faseLabel} ma i documenti non sono ancora stati ricevuti. La pratica è bloccata.`,
-          mittente_id:     userId,
         })
       }
       break
@@ -139,7 +136,6 @@ export async function createFaseChangeNotifications(
           tipo:            'info',
           titolo:          `Fase Firme — ${np}`,
           messaggio:       `La pratica ${np} è avanzata a ${faseLabel}. Procedere con le firme.`,
-          mittente_id:     userId,
         })
       }
       break
@@ -161,7 +157,6 @@ export async function createFaseChangeNotifications(
           tipo:            'success',
           titolo:          `Pratica completata — ${np}`,
           messaggio:       `La pratica ${np} è stata completata con successo.`,
-          mittente_id:     userId,
         })
       }
       break
@@ -180,7 +175,6 @@ export async function createFaseChangeNotifications(
  */
 export async function notifyDocumentiRicevuti(
   pratica: Pick<Pratica, 'id' | 'numero_pratica' | 'assegnato_a'>,
-  userId: string
 ): Promise<void> {
   if (!pratica.assegnato_a) return
 
@@ -190,6 +184,5 @@ export async function notifyDocumentiRicevuti(
     tipo:            'success',
     titolo:          `Documenti ricevuti — ${pratica.numero_pratica ?? 'N/D'}`,
     messaggio:       `I documenti della pratica ${pratica.numero_pratica ?? 'N/D'} sono stati ricevuti. È ora possibile avanzare alla fase Firme.`,
-    mittente_id:     userId,
   })
 }

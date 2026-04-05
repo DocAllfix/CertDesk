@@ -68,7 +68,6 @@ export function BloccoDocumentiAlert({ pratica }: BloccoDocumentiAlertProps) {
     // Notifica best-effort
     notifyDocumentiRicevuti(
       { id: pratica.id, numero_pratica: pratica.numero_pratica, assegnato_a: pratica.assegnato_a },
-      user.id
     ).catch(() => {})
 
     // Invalida cache
