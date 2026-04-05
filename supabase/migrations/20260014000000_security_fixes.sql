@@ -129,8 +129,9 @@ GRANT EXECUTE ON FUNCTION get_pratiche_scadenze(INT) TO authenticated;
 -- ═══════════════════════════════════════════════════════════════════════════
 -- RIEPILOGO FIX
 -- ═══════════════════════════════════════════════════════════════════════════
-COMMENT ON POLICY "allegati_storage_select" ON storage.objects IS
-  'Fix F13.1: operatore vede solo file di pratiche assegnate (path prefix = pratica_id)';
+-- NOTA: COMMENT ON POLICY su storage.objects richiede ownership del relation
+-- (owner = supabase_admin). Il ruolo postgres usato dal CLI non può farlo.
+-- La documentazione della policy è nel commento di questa migration.
 
 COMMENT ON FUNCTION crea_notifica IS
   'Fix F13.1: mittente sempre auth.uid() — rimosso p_mittente_id per prevenire spoofing';
