@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useCreateCliente } from '@/hooks/useClienti'
+import { sanitizeText } from '@/lib/validation'
 import type { Cliente } from '@/types/app.types'
 
 interface QuickAddClienteProps {
@@ -25,12 +26,13 @@ export function QuickAddCliente({ onClienteCreato }: QuickAddClienteProps) {
   const { mutateAsync, isPending, error } = useCreateCliente()
 
   const handleCreate = async () => {
-    if (!nome.trim()) return
+    const nomeSanitized = sanitizeText(nome)
+    if (!nomeSanitized) return
     try {
       const created = await mutateAsync({
-        nome: nome.trim(),
-        email: email.trim() || null,
-        telefono: tel.trim() || null,
+        nome: nomeSanitized,
+        email: sanitizeText(email) || null,
+        telefono: sanitizeText(tel) || null,
       })
       onClienteCreato?.(created)
       setNome('')
