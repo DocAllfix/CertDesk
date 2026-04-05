@@ -93,8 +93,12 @@ export async function getPratiche(filtri: FiltriPratiche = {}) {
       'pratiche_norme(norma_codice)'
     )
 
-  // Default: escludi pratiche archiviate (includi_archiviate deve essere esplicitamente true)
-  if (!filtri.includi_archiviate) query = query.eq('archiviata', false)
+  // Filtro archiviate: solo_archiviate ha precedenza, poi includi_archiviate
+  if (filtri.solo_archiviate) {
+    query = query.eq('archiviata', true)
+  } else if (!filtri.includi_archiviate) {
+    query = query.eq('archiviata', false)
+  }
 
   // Filtro stato — solo_attive ha precedenza su stato
   if (filtri.solo_attive) {
@@ -265,6 +269,19 @@ export async function archiviaPratica(id: string) {
     .eq('id', id)
 
   if (error) throw new Error(`Errore nell'archiviazione della pratica: ${error.message}`)
+}
+
+/**
+ * Ripristina una pratica dall'archivio (archiviata = false).
+ * La pratica torna nella lista standard delle pratiche completate.
+ */
+export async function ripristinaPratica(id: string) {
+  const { error } = await supabase
+    .from('pratiche')
+    .update({ archiviata: false })
+    .eq('id', id)
+
+  if (error) throw new Error(`Errore nel ripristino della pratica: ${error.message}`)
 }
 
 /**

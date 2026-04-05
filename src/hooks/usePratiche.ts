@@ -14,6 +14,8 @@ import {
   updatePratica,
   sospendPratica,
   annullaPratica,
+  archiviaPratica,
+  ripristinaPratica,
   type CreatePraticaData,
   type UpdatePratica,
 } from '@/lib/queries/pratiche'
@@ -129,6 +131,26 @@ export function useAnnullaPratica() {
   return useMutation({
     mutationFn: ({ id, motivo }: { id: string; motivo: string }) =>
       annullaPratica(id, motivo),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: praticheKeys.all })
+    },
+  })
+}
+
+export function useArchiviaPratica() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (id: string) => archiviaPratica(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: praticheKeys.all })
+    },
+  })
+}
+
+export function useRipristinaPratica() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (id: string) => ripristinaPratica(id),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: praticheKeys.all })
     },
