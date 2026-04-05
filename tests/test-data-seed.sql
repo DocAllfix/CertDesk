@@ -41,7 +41,7 @@ INSERT INTO clienti (id, nome, ragione_sociale, piva, codice_fiscale, email, pec
 VALUES
   -- C1: Azienda metalmeccanica grande
   (
-    'c1000000-test-0000-0000-000000000001',
+    'c1000000-ae51-0000-0000-000000000001',
     'Acciaio Forte Spa',
     'Acciaio Forte Spa',
     '01234567890',
@@ -61,7 +61,7 @@ VALUES
   ),
   -- C2: Azienda logistica media
   (
-    'c1000000-test-0000-0000-000000000002',
+    'c1000000-ae51-0000-0000-000000000002',
     'TransLog Italia Srl',
     'TransLog Italia Srl',
     '09876543210',
@@ -81,7 +81,7 @@ VALUES
   ),
   -- C3: Impresa edile piccola
   (
-    'c1000000-test-0000-0000-000000000003',
+    'c1000000-ae51-0000-0000-000000000003',
     'Edilizia Verde Sas',
     'Edilizia Verde di Bianchi & C. Sas',
     '05555555550',
@@ -101,7 +101,7 @@ VALUES
   ),
   -- C4: Studio professionale
   (
-    'c1000000-test-0000-0000-000000000004',
+    'c1000000-ae51-0000-0000-000000000004',
     'Studio Ingegneria Conti',
     'Studio Conti & Associati',
     '11223344556',
@@ -121,7 +121,7 @@ VALUES
   ),
   -- C5: Cooperativa sociale
   (
-    'c1000000-test-0000-0000-000000000005',
+    'c1000000-ae51-0000-0000-000000000005',
     'Coop Solidale Onlus',
     'Cooperativa Solidale Societa Cooperativa Sociale',
     '99887766554',
@@ -150,7 +150,7 @@ INSERT INTO consulenti (id, nome, cognome, email, telefono, azienda, note, attiv
 VALUES
   -- K1: Consulente qualita e ambiente
   (
-    'k1000000-test-0000-0000-000000000001',
+    'ca000000-ae51-0000-0000-000000000001',
     'Antonio',
     'Marino',
     'a.marino@consulenze-iso.it',
@@ -161,7 +161,7 @@ VALUES
   ),
   -- K2: Consulente sicurezza
   (
-    'k1000000-test-0000-0000-000000000002',
+    'ca000000-ae51-0000-0000-000000000002',
     'Stefania',
     'Conti',
     's.conti@qualitaplus.it',
@@ -172,7 +172,7 @@ VALUES
   ),
   -- K3: Consulente energia e sostenibilita
   (
-    'k1000000-test-0000-0000-000000000003',
+    'ca000000-ae51-0000-0000-000000000003',
     'Roberto',
     'Ferri',
     'r.ferri@greenadvisors.it',
@@ -185,14 +185,14 @@ ON CONFLICT (id) DO NOTHING;
 
 -- Norme gestite dai consulenti
 INSERT INTO consulenti_norme (consulente_id, norma_codice) VALUES
-  ('k1000000-test-0000-0000-000000000001', 'ISO 9001'),
-  ('k1000000-test-0000-0000-000000000001', 'ISO 14001'),
-  ('k1000000-test-0000-0000-000000000002', 'ISO 45001'),
-  ('k1000000-test-0000-0000-000000000002', 'SA 8000'),
-  ('k1000000-test-0000-0000-000000000002', 'PDR 125/2022'),
-  ('k1000000-test-0000-0000-000000000003', 'ISO 50001'),
-  ('k1000000-test-0000-0000-000000000003', 'ISO 14064-1'),
-  ('k1000000-test-0000-0000-000000000003', 'ESG-EASI')
+  ('ca000000-ae51-0000-0000-000000000001', 'ISO 9001'),
+  ('ca000000-ae51-0000-0000-000000000001', 'ISO 14001'),
+  ('ca000000-ae51-0000-0000-000000000002', 'ISO 45001'),
+  ('ca000000-ae51-0000-0000-000000000002', 'SA 8000'),
+  ('ca000000-ae51-0000-0000-000000000002', 'PDR 125/2022'),
+  ('ca000000-ae51-0000-0000-000000000003', 'ISO 50001'),
+  ('ca000000-ae51-0000-0000-000000000003', 'ISO 14064-1'),
+  ('ca000000-ae51-0000-0000-000000000003', 'ESG-EASI')
 ON CONFLICT (consulente_id, norma_codice) DO NOTHING;
 
 
@@ -216,13 +216,13 @@ INSERT INTO pratiche (
   data_scadenza, note, priorita,
   created_by, updated_by
 ) VALUES (
-  'p1000000-test-0000-0000-000000000001',
-  'c1000000-test-0000-0000-000000000001',
+  'fa000000-ae51-0000-0000-000000000001',
+  'c1000000-ae51-0000-0000-000000000001',
   'certificazione',
   'contratto_firmato',
   'attiva',
   '8e199ba7-4913-4fda-a10d-6a025ca84c16',   -- Operatore-A
-  'k1000000-test-0000-0000-000000000001',    -- Antonio Marino
+  'ca000000-ae51-0000-0000-000000000001',    -- Antonio Marino
   NULL,
   'Roberto Acciai', 'r.acciai@acciaioforte.it', '+39 335 0001111',
   (CURRENT_DATE + INTERVAL '90 days')::date,
@@ -233,7 +233,7 @@ INSERT INTO pratiche (
 ) ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO pratiche_norme (pratica_id, norma_codice) VALUES
-  ('p1000000-test-0000-0000-000000000001', 'ISO 9001')
+  ('fa000000-ae51-0000-0000-000000000001', 'ISO 9001')
 ON CONFLICT (pratica_id, norma_codice) DO NOTHING;
 
 
@@ -248,13 +248,13 @@ INSERT INTO pratiche (
   data_scadenza, note, priorita,
   created_by, updated_by
 ) VALUES (
-  'p1000000-test-0000-0000-000000000002',
-  'c1000000-test-0000-0000-000000000002',
+  'fa000000-ae51-0000-0000-000000000002',
+  'c1000000-ae51-0000-0000-000000000002',
   'prima_sorveglianza',
   'programmazione_verifica',
   'attiva',
   '8e199ba7-4913-4fda-a10d-6a025ca84c16',   -- Operatore-A
-  'k1000000-test-0000-0000-000000000002',    -- Stefania Conti
+  'ca000000-ae51-0000-0000-000000000002',    -- Stefania Conti
   '52230bff-385c-48d1-add3-9b15e60a1e93',   -- Auditor: Responsabile
   'Elena Verdi', 'e.verdi@translog.it', '+39 347 2223334',
   (CURRENT_DATE + INTERVAL '25 days')::date,
@@ -267,8 +267,8 @@ INSERT INTO pratiche (
 ) ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO pratiche_norme (pratica_id, norma_codice) VALUES
-  ('p1000000-test-0000-0000-000000000002', 'ISO 14001'),
-  ('p1000000-test-0000-0000-000000000002', 'ISO 45001')
+  ('fa000000-ae51-0000-0000-000000000002', 'ISO 14001'),
+  ('fa000000-ae51-0000-0000-000000000002', 'ISO 45001')
 ON CONFLICT (pratica_id, norma_codice) DO NOTHING;
 
 
@@ -284,13 +284,13 @@ INSERT INTO pratiche (
   data_scadenza, note, priorita,
   created_by, updated_by
 ) VALUES (
-  'p1000000-test-0000-0000-000000000003',
-  'c1000000-test-0000-0000-000000000003',
+  'fa000000-ae51-0000-0000-000000000003',
+  'c1000000-ae51-0000-0000-000000000003',
   'certificazione',
   'richiesta_proforma',
   'attiva',
   'bcc2da6c-6cfa-4e54-8fd4-1d07635ee1d4',   -- Operatore-B
-  'k1000000-test-0000-0000-000000000001',    -- Antonio Marino
+  'ca000000-ae51-0000-0000-000000000001',    -- Antonio Marino
   '52230bff-385c-48d1-add3-9b15e60a1e93',   -- Auditor: Responsabile
   'Marco Bianchi', 'm.bianchi@ediliziaverde.it', '+39 081 9998877',
   (CURRENT_DATE + INTERVAL '15 days')::date,
@@ -304,7 +304,7 @@ INSERT INTO pratiche (
 ) ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO pratiche_norme (pratica_id, norma_codice) VALUES
-  ('p1000000-test-0000-0000-000000000003', 'ISO 9001')
+  ('fa000000-ae51-0000-0000-000000000003', 'ISO 9001')
 ON CONFLICT (pratica_id, norma_codice) DO NOTHING;
 
 
@@ -321,13 +321,13 @@ INSERT INTO pratiche (
   data_scadenza, note, priorita,
   created_by, updated_by
 ) VALUES (
-  'p1000000-test-0000-0000-000000000004',
-  'c1000000-test-0000-0000-000000000001',
+  'fa000000-ae51-0000-0000-000000000004',
+  'c1000000-ae51-0000-0000-000000000001',
   'ricertificazione',
   'elaborazione_pratica',
   'attiva',
   'bcc2da6c-6cfa-4e54-8fd4-1d07635ee1d4',   -- Operatore-B
-  'k1000000-test-0000-0000-000000000001',    -- Antonio Marino
+  'ca000000-ae51-0000-0000-000000000001',    -- Antonio Marino
   '52230bff-385c-48d1-add3-9b15e60a1e93',   -- Auditor: Responsabile
   'Roberto Acciai', 'r.acciai@acciaioforte.it', '+39 335 0001111',
   (CURRENT_DATE - INTERVAL '20 days')::date,
@@ -342,7 +342,7 @@ INSERT INTO pratiche (
 ) ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO pratiche_norme (pratica_id, norma_codice) VALUES
-  ('p1000000-test-0000-0000-000000000004', 'ISO 14001')
+  ('fa000000-ae51-0000-0000-000000000004', 'ISO 14001')
 ON CONFLICT (pratica_id, norma_codice) DO NOTHING;
 
 
@@ -359,13 +359,13 @@ INSERT INTO pratiche (
   data_scadenza, note, priorita,
   created_by, updated_by
 ) VALUES (
-  'p1000000-test-0000-0000-000000000005',
-  'c1000000-test-0000-0000-000000000004',
+  'fa000000-ae51-0000-0000-000000000005',
+  'c1000000-ae51-0000-0000-000000000004',
   'certificazione',
   'elaborazione_pratica',
   'attiva',
   '8e199ba7-4913-4fda-a10d-6a025ca84c16',   -- Operatore-A
-  'k1000000-test-0000-0000-000000000002',    -- Stefania Conti
+  'ca000000-ae51-0000-0000-000000000002',    -- Stefania Conti
   '52230bff-385c-48d1-add3-9b15e60a1e93',   -- Auditor: Responsabile
   'Giulia Conti', 'g.conti@studioconti.it', '+39 055 4445566',
   (CURRENT_DATE - INTERVAL '10 days')::date,
@@ -380,7 +380,7 @@ INSERT INTO pratiche (
 ) ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO pratiche_norme (pratica_id, norma_codice) VALUES
-  ('p1000000-test-0000-0000-000000000005', 'PDR 125/2022')
+  ('fa000000-ae51-0000-0000-000000000005', 'PDR 125/2022')
 ON CONFLICT (pratica_id, norma_codice) DO NOTHING;
 
 
@@ -397,13 +397,13 @@ INSERT INTO pratiche (
   data_scadenza, note, priorita,
   created_by, updated_by
 ) VALUES (
-  'p1000000-test-0000-0000-000000000006',
-  'c1000000-test-0000-0000-000000000005',
+  'fa000000-ae51-0000-0000-000000000006',
+  'c1000000-ae51-0000-0000-000000000005',
   'certificazione',
   'firme',
   'attiva',
   'bcc2da6c-6cfa-4e54-8fd4-1d07635ee1d4',   -- Operatore-B
-  'k1000000-test-0000-0000-000000000002',    -- Stefania Conti
+  'ca000000-ae51-0000-0000-000000000002',    -- Stefania Conti
   '52230bff-385c-48d1-add3-9b15e60a1e93',   -- Auditor: Responsabile
   'Paolo Solidale', 'p.solidale@coopsolidale.org', '+39 011 7778899',
   (CURRENT_DATE - INTERVAL '30 days')::date,
@@ -418,7 +418,7 @@ INSERT INTO pratiche (
 ) ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO pratiche_norme (pratica_id, norma_codice) VALUES
-  ('p1000000-test-0000-0000-000000000006', 'SA 8000')
+  ('fa000000-ae51-0000-0000-000000000006', 'SA 8000')
 ON CONFLICT (pratica_id, norma_codice) DO NOTHING;
 
 
@@ -437,13 +437,13 @@ INSERT INTO pratiche (
   data_scadenza, note, priorita,
   created_by, updated_by
 ) VALUES (
-  'p1000000-test-0000-0000-000000000007',
-  'c1000000-test-0000-0000-000000000002',
+  'fa000000-ae51-0000-0000-000000000007',
+  'c1000000-ae51-0000-0000-000000000002',
   'seconda_sorveglianza',
   'completata',
   'attiva',
   '8e199ba7-4913-4fda-a10d-6a025ca84c16',   -- Operatore-A
-  'k1000000-test-0000-0000-000000000001',    -- Antonio Marino
+  'ca000000-ae51-0000-0000-000000000001',    -- Antonio Marino
   '52230bff-385c-48d1-add3-9b15e60a1e93',   -- Auditor: Responsabile
   'Elena Verdi', 'e.verdi@translog.it', '+39 347 2223334',
   (CURRENT_DATE - INTERVAL '60 days')::date,
@@ -460,7 +460,7 @@ INSERT INTO pratiche (
 ) ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO pratiche_norme (pratica_id, norma_codice) VALUES
-  ('p1000000-test-0000-0000-000000000007', 'ISO 9001')
+  ('fa000000-ae51-0000-0000-000000000007', 'ISO 9001')
 ON CONFLICT (pratica_id, norma_codice) DO NOTHING;
 
 
@@ -474,13 +474,13 @@ INSERT INTO pratiche (
   data_scadenza, note, priorita,
   created_by, updated_by
 ) VALUES (
-  'p1000000-test-0000-0000-000000000008',
-  'c1000000-test-0000-0000-000000000003',
+  'fa000000-ae51-0000-0000-000000000008',
+  'c1000000-ae51-0000-0000-000000000003',
   'certificazione',
   'programmazione_verifica',
   'sospesa',
   '8e199ba7-4913-4fda-a10d-6a025ca84c16',   -- Operatore-A
-  'k1000000-test-0000-0000-000000000002',    -- Stefania Conti
+  'ca000000-ae51-0000-0000-000000000002',    -- Stefania Conti
   'Marco Bianchi', 'm.bianchi@ediliziaverde.it', '+39 081 9998877',
   (CURRENT_DATE + INTERVAL '120 days')::date,
   'SOSPESA: cliente ha chiesto pausa per ristrutturazione cantiere. Ripresa prevista tra 2 mesi.',
@@ -490,7 +490,7 @@ INSERT INTO pratiche (
 ) ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO pratiche_norme (pratica_id, norma_codice) VALUES
-  ('p1000000-test-0000-0000-000000000008', 'ISO 45001')
+  ('fa000000-ae51-0000-0000-000000000008', 'ISO 45001')
 ON CONFLICT (pratica_id, norma_codice) DO NOTHING;
 
 
@@ -502,8 +502,8 @@ INSERT INTO promemoria (id, pratica_id, creato_da, assegnato_a, testo, data_scad
 VALUES
   -- Promemoria 1: Sollecito documenti pratica P4 (bloccata)
   (
-    'r1000000-test-0000-0000-000000000001',
-    'p1000000-test-0000-0000-000000000004',
+    'da000000-ae51-0000-0000-000000000001',
+    'fa000000-ae51-0000-0000-000000000004',
     '293bb2e0-ca30-41ca-83aa-c75c95dafa40',
     'bcc2da6c-6cfa-4e54-8fd4-1d07635ee1d4',   -- Operatore-B
     'Sollecitare Acciaio Forte per invio documentazione mancante ISO 14001 (verbali audit interni, planimetrie aggiornate)',
@@ -512,8 +512,8 @@ VALUES
   ),
   -- Promemoria 2: Preparazione audit P5
   (
-    'r1000000-test-0000-0000-000000000002',
-    'p1000000-test-0000-0000-000000000005',
+    'da000000-ae51-0000-0000-000000000002',
+    'fa000000-ae51-0000-0000-000000000005',
     '52230bff-385c-48d1-add3-9b15e60a1e93',
     '8e199ba7-4913-4fda-a10d-6a025ca84c16',   -- Operatore-A
     'Preparare checklist audit PDR 125/2022 per Studio Conti. Verificare indicatori gender gap.',
@@ -522,8 +522,8 @@ VALUES
   ),
   -- Promemoria 3: Sorveglianza pratica P7 completata (simula trigger)
   (
-    'r1000000-test-0000-0000-000000000003',
-    'p1000000-test-0000-0000-000000000007',
+    'da000000-ae51-0000-0000-000000000003',
+    'fa000000-ae51-0000-0000-000000000007',
     '293bb2e0-ca30-41ca-83aa-c75c95dafa40',
     '8e199ba7-4913-4fda-a10d-6a025ca84c16',   -- Operatore-A
     'Sorveglianza ISO 9001 per pratica TransLog — verificare scadenza ciclo certificativo',
@@ -537,35 +537,35 @@ ON CONFLICT (id) DO NOTHING;
 -- 5. MESSAGGI INTERNI (4) — per la pratica P4 bloccata
 -- =============================================================================
 
-INSERT INTO messaggi_interni (id, pratica_id, mittente_id, destinatario_id, tipo, testo)
+INSERT INTO messaggi_interni (id, pratica_id, autore_id, destinatario_id, tipo, testo)
 VALUES
   (
-    'm1000000-test-0000-0000-000000000001',
-    'p1000000-test-0000-0000-000000000004',
+    'ea000000-ae51-0000-0000-000000000001',
+    'fa000000-ae51-0000-0000-000000000004',
     '293bb2e0-ca30-41ca-83aa-c75c95dafa40',   -- Admin
     'bcc2da6c-6cfa-4e54-8fd4-1d07635ee1d4',   -- a Operatore-B
     'richiesta',
     'Per favore sollecita il cliente Acciaio Forte per i documenti mancanti della ricertificazione ISO 14001. Servono verbali audit interni e planimetrie aggiornate.'
   ),
   (
-    'm1000000-test-0000-0000-000000000002',
-    'p1000000-test-0000-0000-000000000004',
+    'ea000000-ae51-0000-0000-000000000002',
+    'fa000000-ae51-0000-0000-000000000004',
     'bcc2da6c-6cfa-4e54-8fd4-1d07635ee1d4',   -- Operatore-B
     '293bb2e0-ca30-41ca-83aa-c75c95dafa40',   -- a Admin
     'commento',
     'Ho inviato email di sollecito al referente Roberto Acciai. Ha confermato che inviera i documenti entro venerdi.'
   ),
   (
-    'm1000000-test-0000-0000-000000000003',
-    'p1000000-test-0000-0000-000000000004',
+    'ea000000-ae51-0000-0000-000000000003',
+    'fa000000-ae51-0000-0000-000000000004',
     '52230bff-385c-48d1-add3-9b15e60a1e93',   -- Responsabile
     NULL,                                       -- a Tutti
     'commento',
     'Attenzione: la scadenza per questa pratica si avvicina. Se i documenti non arrivano entro la prossima settimana, consideriamo di contattare direttamente la direzione.'
   ),
   (
-    'm1000000-test-0000-0000-000000000004',
-    'p1000000-test-0000-0000-000000000006',
+    'ea000000-ae51-0000-0000-000000000004',
+    'fa000000-ae51-0000-0000-000000000006',
     '52230bff-385c-48d1-add3-9b15e60a1e93',   -- Responsabile
     'bcc2da6c-6cfa-4e54-8fd4-1d07635ee1d4',   -- a Operatore-B
     'richiesta',
@@ -580,15 +580,15 @@ ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO storico_fasi (pratica_id, fase_precedente, fase_nuova, cambiato_da, motivo, created_at)
 VALUES
-  ('p1000000-test-0000-0000-000000000007', 'contratto_firmato', 'programmazione_verifica',
+  ('fa000000-ae51-0000-0000-000000000007', 'contratto_firmato', 'programmazione_verifica',
    '293bb2e0-ca30-41ca-83aa-c75c95dafa40', NULL, NOW() - INTERVAL '55 days'),
-  ('p1000000-test-0000-0000-000000000007', 'programmazione_verifica', 'richiesta_proforma',
+  ('fa000000-ae51-0000-0000-000000000007', 'programmazione_verifica', 'richiesta_proforma',
    '293bb2e0-ca30-41ca-83aa-c75c95dafa40', NULL, NOW() - INTERVAL '45 days'),
-  ('p1000000-test-0000-0000-000000000007', 'richiesta_proforma', 'elaborazione_pratica',
+  ('fa000000-ae51-0000-0000-000000000007', 'richiesta_proforma', 'elaborazione_pratica',
    '52230bff-385c-48d1-add3-9b15e60a1e93', NULL, NOW() - INTERVAL '35 days'),
-  ('p1000000-test-0000-0000-000000000007', 'elaborazione_pratica', 'firme',
+  ('fa000000-ae51-0000-0000-000000000007', 'elaborazione_pratica', 'firme',
    '52230bff-385c-48d1-add3-9b15e60a1e93', NULL, NOW() - INTERVAL '20 days'),
-  ('p1000000-test-0000-0000-000000000007', 'firme', 'completata',
+  ('fa000000-ae51-0000-0000-000000000007', 'firme', 'completata',
    '293bb2e0-ca30-41ca-83aa-c75c95dafa40', 'Audit completato con esito positivo. Nessuna non conformita rilevata.', NOW() - INTERVAL '7 days')
 ON CONFLICT DO NOTHING;
 
