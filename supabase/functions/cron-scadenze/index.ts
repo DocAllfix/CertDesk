@@ -267,7 +267,9 @@ Deno.serve(async (_req: Request): Promise<Response> => {
     if (adminErr) throw adminErr
     const adminIds = ((adminsRaw ?? []) as AdminProfile[]).map((a) => a.id)
 
-    // Pratiche attive con data_scadenza valorizzata + tracking già inviati
+    // Pratiche attive, NON completate, con data_scadenza valorizzata + tracking già inviati.
+    // .eq('completata', false) esclude pratiche con fase='completata' che hanno
+    // ancora stato='attiva' — il lavoro è finito, non servono notifiche di scadenza.
     const { data: praticheRaw, error: praticheErr } = await supabase
       .from('pratiche')
       .select(`
@@ -281,6 +283,7 @@ Deno.serve(async (_req: Request): Promise<Response> => {
         notifiche_scadenza_inviate(giorni_soglia)
       `)
       .eq('stato', 'attiva')
+      .eq('completata', false)
       .not('data_scadenza', 'is', null)
 
     if (praticheErr) throw praticheErr
