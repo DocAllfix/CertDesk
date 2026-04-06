@@ -239,7 +239,7 @@ export default function PipelinePage() {
       oldFase: pratica.fase,
       nuovaFase: targetFase,
       userId: user.id,
-      allUsers: team.map(t => ({ id: t.id, ruolo: t.ruolo })),
+      allUsers: team.map(t => ({ id: t.id, ruolo: t.ruolo, nome: t.nome, cognome: t.cognome })),
     })
   }
 

@@ -18,6 +18,7 @@
  * - Mini checklist (4 dots)
  * - Numero pratica CERT-2026-NNNN
  */
+import { memo } from 'react'
 import { Link } from 'react-router-dom'
 import { AlertTriangle, Calendar, ChevronRight } from 'lucide-react'
 
@@ -77,7 +78,7 @@ function MiniChecklist({ pratica }: { pratica: PraticaListItem }) {
 
 // ── Componente ────────────────────────────────────────────────────
 
-export function KanbanCard({ pratica, phaseColor, onAvanza }: KanbanCardProps) {
+export const KanbanCard = memo(function KanbanCard({ pratica, phaseColor, onAvanza }: KanbanCardProps) {
   const bloccata = isBloccataFase4(pratica)
   const nextFase = getNextFase(pratica.fase)
 
@@ -171,4 +172,4 @@ export function KanbanCard({ pratica, phaseColor, onAvanza }: KanbanCardProps) {
       )}
     </div>
   )
-}
+})

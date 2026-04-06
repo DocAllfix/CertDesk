@@ -5,7 +5,7 @@
  * Design identico a Evalisdesk: slide-over w-[400px] da destra,
  * backdrop blur, header con tabs, SearchInput, scroll area.
  */
-import { useState } from 'react'
+import { useState, memo } from 'react'
 import { Link } from 'react-router-dom'
 import {
   X, Bell, CheckCheck, Search, Settings,
@@ -65,7 +65,7 @@ interface NotifichePanelProps {
 
 // ── Componente ────────────────────────────────────────────────────
 
-export function NotifichePanel({ open, onClose }: NotifichePanelProps) {
+export const NotifichePanel = memo(function NotifichePanel({ open, onClose }: NotifichePanelProps) {
   const [activeTab, setActiveTab] = useState<Tab>('Tutti')
   const [ricerca,   setRicerca]   = useState('')
 
@@ -253,4 +253,4 @@ export function NotifichePanel({ open, onClose }: NotifichePanelProps) {
       </div>
     </>
   )
-}
+})

@@ -35,7 +35,7 @@ import type { Tables } from '@/lib/supabase'
 
 // ── Costanti UI ───────────────────────────────────────────────────
 
-const PER_PAGINA = 20
+const PER_PAGINA = 25
 
 const CICLO_OPTIONS: { value: CicloType; label: string }[] = [
   { value: 'certificazione',       label: 'Certificazione' },

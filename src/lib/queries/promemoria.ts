@@ -79,8 +79,6 @@ export async function createPromemoria(payload: CreatePromemoriaData): Promise<v
       p_tipo:            'info' as const,
       p_titolo:          'Nuovo promemoria assegnato',
       p_messaggio:       testoBreve,
-    }).then(({ error: e }) => {
-      if (e) console.error('Errore notifica promemoria:', e.message)
     })
   }
 }

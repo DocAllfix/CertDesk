@@ -87,14 +87,13 @@ export async function createMessaggio(params: CreateMessaggioParams): Promise<vo
     // Notifica al destinatario esplicito
     const tipoNotifica = tipo === 'richiesta' ? 'richiesta' : 'info'
     const titoloNotifica = tipo === 'richiesta' ? 'Nuova richiesta' : 'Nuovo commento'
-    const { error } = await supabase.rpc('crea_notifica', {
+    await supabase.rpc('crea_notifica', {
       p_destinatario_id: destinatarioId,
       p_pratica_id:      praticaId,
       p_tipo:            tipoNotifica,
       p_titolo:          titoloNotifica,
       p_messaggio:       testoBreve,
     })
-    if (error) console.error(`Errore notifica ${tipo}:`, error.message)
 
   } else if ((tipo === 'richiesta' || tipo === 'commento') && !destinatarioId) {
     // Broadcast: notifica a tutti gli utenti attivi tranne l'autore
@@ -107,31 +106,27 @@ export async function createMessaggio(params: CreateMessaggioParams): Promise<vo
       .eq('attivo', true)
       .neq('id', autoreId)
 
-    if (utentiError) {
-      console.error('Errore nel recupero utenti per notifica broadcast:', utentiError.message)
-    } else if (utenti) {
+    if (!utentiError && utenti) {
       for (const u of utenti) {
-        const { error } = await supabase.rpc('crea_notifica', {
+        await supabase.rpc('crea_notifica', {
           p_destinatario_id: u.id,
           p_pratica_id:      praticaId,
           p_tipo:            tipoNotifica,
           p_titolo:          titoloNotifica,
           p_messaggio:       testoBreve,
         })
-        if (error) console.error(`Errore notifica broadcast a ${u.id}:`, error.message)
       }
     }
 
   } else if (tipo === 'risposta' && destinatarioId) {
     // Notifica 'info' al destinatario (autore originale a cui si risponde)
-    const { error } = await supabase.rpc('crea_notifica', {
+    await supabase.rpc('crea_notifica', {
       p_destinatario_id: destinatarioId,
       p_pratica_id:      praticaId,
       p_tipo:            'info',
       p_titolo:          'Nuova risposta',
       p_messaggio:       testoBreve,
     })
-    if (error) console.error('Errore notifica risposta:', error.message)
   }
 }
 

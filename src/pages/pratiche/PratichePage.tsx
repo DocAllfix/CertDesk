@@ -24,7 +24,7 @@ import {
 import { PraticaRow }   from '@/components/pratiche/PraticaRow'
 import { PraticaModal } from '@/components/pratiche/PraticaModal'
 
-import { usePratiche, useSospendiPratica, useArchiviaPratica } from '@/hooks/usePratiche'
+import { usePratiche, useSospendiPratica, useArchiviaPratica, usePrefetchPratica } from '@/hooks/usePratiche'
 import { usePratica }      from '@/hooks/usePratiche'
 import { useTeamMembers }  from '@/hooks/useTeamMembers'
 import { useAuth }         from '@/hooks/useAuth'
@@ -38,7 +38,7 @@ import type { Tables } from '@/lib/supabase'
 
 // ── Costanti UI ───────────────────────────────────────────────────
 
-const PER_PAGINA = 20
+const PER_PAGINA = 25
 
 const FASE_OPTIONS: { value: FaseType; label: string }[] = [
   { value: 'contratto_firmato',       label: 'Contratto Firmato' },
@@ -155,6 +155,7 @@ export default function PratichePage() {
   const [searchParams, setSearchParams] = useSearchParams()
   const { isAdmin, userProfile } = useAuth()
   const { data: team = [] } = useTeamMembers()
+  const prefetchPratica = usePrefetchPratica()
 
   const isResponsabile = userProfile?.ruolo === 'responsabile'
   const puoFiltareAssegnato = isAdmin || isResponsabile
@@ -209,7 +210,10 @@ export default function PratichePage() {
           : fase ? { fase } : {}),
     ...(ciclo        ? { ciclo }                       : {}),
     ...(norma        ? { norma_codice: norma }         : {}),
-    ...(stato        ? { stato }                       : {}),
+    // Default: tab "attive" filtra stato='attiva' (esclude sospese/annullate)
+    // Se l'utente seleziona un filtro stato esplicito, usa quello
+    ...(stato        ? { stato }
+      : tab === 'attive' ? { solo_attive: true }       : {}),
     ...(assegnato    ? { assegnato_a: assegnato }      : {}),
     ...(scadenzaMax  ? { scadenza_max: scadenzaMax }   : {}),
   }
@@ -471,6 +475,7 @@ export default function PratichePage() {
                     onSospendi={handleSospendi}
                     onAnnulla={handleAnnulla}
                     onArchivia={handleArchivia}
+                    onPrefetch={prefetchPratica}
                   />
                 ))}
               </tbody>

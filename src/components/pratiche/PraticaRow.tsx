@@ -7,6 +7,7 @@
  *
  * Design ref: ../evalisdesk-ref/src/pages/Pratiche.jsx (tabella rows)
  */
+import { memo } from 'react'
 import { Link } from 'react-router-dom'
 import { ExternalLink, Pencil, ChevronRight, PauseCircle, XCircle, MoreHorizontal, Sparkles, Check, Archive } from 'lucide-react'
 import { differenceInDays, parseISO } from 'date-fns'
@@ -36,6 +37,7 @@ interface PraticaRowProps {
   onSospendi?: (pratica: PraticaListItem) => void
   onAnnulla?:  (pratica: PraticaListItem) => void
   onArchivia?: (pratica: PraticaListItem) => void
+  onPrefetch?: (id: string) => void
 }
 
 // ── Helpers ───────────────────────────────────────────────────────
@@ -91,7 +93,7 @@ function ChecklistCompatta({ pratica }: { pratica: PraticaListItem }) {
 
 // ── Componente ────────────────────────────────────────────────────
 
-export function PraticaRow({
+export const PraticaRow = memo(function PraticaRow({
   pratica,
   isAdmin,
   onModifica,
@@ -99,6 +101,7 @@ export function PraticaRow({
   onSospendi,
   onAnnulla,
   onArchivia,
+  onPrefetch,
 }: PraticaRowProps) {
   const urgente = isUrgente(pratica.data_scadenza)
 
@@ -106,6 +109,7 @@ export function PraticaRow({
     <tr
       className={`border-b border-border/40 last:border-0 hover:bg-muted/20 transition-colors group
         border-l-2 ${urgente ? 'border-l-destructive' : 'border-l-transparent'}`}
+      onMouseEnter={() => onPrefetch?.(pratica.id)}
     >
       {/* Checkbox */}
       <td className="px-3 py-2.5">
@@ -274,4 +278,4 @@ export function PraticaRow({
       </td>
     </tr>
   )
-}
+})

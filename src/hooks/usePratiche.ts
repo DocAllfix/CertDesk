@@ -1,12 +1,13 @@
 /**
  * Hooks TanStack Query v5 per la gestione delle pratiche.
  *
- * staleTime 2 minuti: le pratiche cambiano con aggiornamenti workflow.
+ * staleTime 30s (lista): le pratiche cambiano con aggiornamenti workflow.
  * refetchInterval 60s (lista): polling leggero per ricevere aggiornamenti di altri utenti.
  * useAvanzaFase invalida praticheKeys.all: il cambio fase impatta pipeline,
  * scadenze e dashboard — meglio invalidare tutto che lasciare cache stale.
  */
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useCallback } from 'react'
 import {
   getPratiche,
   getPratica,
@@ -37,8 +38,8 @@ export function usePratiche(filtri: FiltriPratiche = {}) {
   return useQuery({
     queryKey:        praticheKeys.list(filtri),
     queryFn:         () => getPratiche(filtri),
-    staleTime:       1000 * 60 * 2,  // 2 minuti
-    refetchInterval: 1000 * 60,      // polling ogni 60s (aggiornamenti altri utenti)
+    staleTime:       30_000,          // 30s — dati pratiche cambiano frequentemente
+    refetchInterval: 60_000,          // polling ogni 60s (aggiornamenti altri utenti)
   })
 }
 
@@ -49,8 +50,21 @@ export function usePratica(id: string | undefined) {
     queryKey:  praticheKeys.detail(id ?? ''),
     queryFn:   () => getPratica(id!),
     enabled:   !!id,
-    staleTime: 1000 * 60 * 2,
+    staleTime: 30_000,
   })
+}
+
+// ── Prefetch on hover ───────────────────────────────────────────
+
+export function usePrefetchPratica() {
+  const qc = useQueryClient()
+  return useCallback((id: string) => {
+    qc.prefetchQuery({
+      queryKey: praticheKeys.detail(id),
+      queryFn:  () => getPratica(id),
+      staleTime: 30_000,
+    })
+  }, [qc])
 }
 
 // ── Mutations ────────────────────────────────────────────────────
@@ -109,11 +123,8 @@ export function useAvanzaFase() {
       motivo,
     }),
     onSuccess: () => {
-      // Cambio fase impatta pipeline, scadenze, dashboard → invalida tutta la cache pratiche.
-      // NON usare setQueryData: executeAvanzaFase restituisce solo la flat row (senza join)
-      // e sovrascrivere il dettaglio con dati incompleti causa crash in PraticaDettaglio.
-      // invalidateQueries triggera un refetch immediato dei componenti osservatori.
       qc.invalidateQueries({ queryKey: praticheKeys.all })
+      qc.invalidateQueries({ queryKey: ['dashboard'] })
     },
   })
 }
@@ -125,6 +136,7 @@ export function useSospendiPratica() {
       sospendPratica(id, motivo),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: praticheKeys.all })
+      qc.invalidateQueries({ queryKey: ['dashboard'] })
     },
   })
 }
@@ -136,6 +148,7 @@ export function useAnnullaPratica() {
       annullaPratica(id, motivo),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: praticheKeys.all })
+      qc.invalidateQueries({ queryKey: ['dashboard'] })
     },
   })
 }
@@ -146,6 +159,7 @@ export function useArchiviaPratica() {
     mutationFn: (id: string) => archiviaPratica(id),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: praticheKeys.all })
+      qc.invalidateQueries({ queryKey: ['dashboard'] })
     },
   })
 }
@@ -156,6 +170,7 @@ export function useRipristinaPratica() {
     mutationFn: (id: string) => ripristinaPratica(id),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: praticheKeys.all })
+      qc.invalidateQueries({ queryKey: ['dashboard'] })
     },
   })
 }

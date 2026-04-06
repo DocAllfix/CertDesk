@@ -95,11 +95,11 @@ export default function LoginPage() {
           {/* Header — Logo + titolo */}
           <div className="flex flex-col items-center gap-3">
             <div className="flex items-center justify-center size-14 rounded-2xl bg-[#f7f3e8] border border-border overflow-hidden">
-              <img src={APP_CONFIG.logoUrl} alt={APP_CONFIG.name} className="size-10 object-contain" />
+              <img src={APP_CONFIG.logoUrl} alt={APP_CONFIG.appName} className="size-10 object-contain" />
             </div>
             <div className="text-center">
               <h1 className="text-2xl font-bold tracking-tight text-foreground">
-                {APP_CONFIG.name}
+                {APP_CONFIG.appName}
               </h1>
               <p className="text-sm text-muted-foreground mt-1">
                 Gestionale certificazioni ISO

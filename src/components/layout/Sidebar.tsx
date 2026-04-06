@@ -165,14 +165,14 @@ export function Sidebar({ collapsed, onToggle, onOpenNotifications }: SidebarPro
           <div className="w-7 h-7 rounded-md bg-white flex items-center justify-center shrink-0 overflow-hidden">
             <img
               src={APP_CONFIG.logoUrl}
-              alt={APP_CONFIG.name}
+              alt={APP_CONFIG.appName}
               className="w-full h-full object-contain"
             />
           </div>
           {!collapsed && (
             <div className="min-w-0">
               <p className="text-sidebar-accent-foreground font-semibold text-sm leading-tight truncate">
-                {APP_CONFIG.name}
+                {APP_CONFIG.appName}
               </p>
               <p className="text-sidebar-foreground text-[10px] truncate">
                 {APP_CONFIG.clienteName}
