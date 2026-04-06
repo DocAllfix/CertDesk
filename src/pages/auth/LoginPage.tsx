@@ -94,7 +94,7 @@ export default function LoginPage() {
 
           {/* Header — Logo + titolo */}
           <div className="flex flex-col items-center gap-3">
-            <div className="flex items-center justify-center size-14 rounded-2xl bg-[#f7f3e8] border border-border overflow-hidden">
+            <div className="flex items-center justify-center size-14 rounded-2xl bg-muted/60 border border-border overflow-hidden">
               <img src={APP_CONFIG.logoUrl} alt={APP_CONFIG.appName} className="size-10 object-contain" />
             </div>
             <div className="text-center">

@@ -28,6 +28,7 @@ export function PraticaModal({ open, onClose, pratica }: PraticaModalProps) {
   const title  = isEdit
     ? `Modifica Pratica ${pratica.numero_pratica ?? ''}`
     : 'Nuova Pratica'
+  // Il sottotitolo "Importazione" è gestito internamente dal PraticaForm tramite toggle
 
   return (
     <Dialog open={open} onOpenChange={(v) => { if (!v) onClose() }}>

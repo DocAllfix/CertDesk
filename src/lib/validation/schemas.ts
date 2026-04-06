@@ -53,6 +53,14 @@ const optCap = z.union([
 // PRATICA
 // ══════════════════════════════════════════════════════════════════
 
+// Fasi in ordine (usato per validazione import)
+const FASI = [
+  'contratto_firmato', 'programmazione_verifica',
+  'richiesta_proforma', 'elaborazione_pratica', 'firme', 'completata',
+] as const
+
+const faseEnum = z.enum(FASI)
+
 export const praticaSchema = z.object({
   cliente_id:    z.string().min(1, 'Seleziona un cliente'),
   norme:         z.array(z.string()).min(1, 'Seleziona almeno una norma'),
@@ -81,7 +89,15 @@ export const praticaSchema = z.object({
   numero_certificato:         z.string().trim().max(100, 'Massimo 100 caratteri').nullable().optional(),
   data_emissione_certificato: z.string().nullable().optional(),
   data_scadenza_certificato:  z.string().nullable().optional(),
+
+  // ── Campi modalità importazione ────────────────────────────────
+  import_mode:           z.boolean().optional(),
+  import_fase:           faseEnum.optional(),
+  import_created_at:     z.string().optional(),
+  import_numero_pratica: z.string().trim().max(50, 'Massimo 50 caratteri').optional(),
+  import_completata_at:  z.string().optional(),
 }).superRefine((d, ctx) => {
+  // ── Validazione standard ─────────────────────────────────────
   if (d.tipo_contatto === 'consulente' && !d.consulente_id) {
     ctx.addIssue({
       code: 'custom',
@@ -94,6 +110,38 @@ export const praticaSchema = z.object({
       code: 'custom',
       message: 'La data di verifica non può essere successiva alla scadenza della pratica',
       path: ['data_verifica'],
+    })
+  }
+
+  // ── Validazione import mode ──────────────────────────────────
+  if (!d.import_mode) return
+
+  if (!d.import_fase) {
+    ctx.addIssue({
+      code: 'custom',
+      message: 'Seleziona la fase della pratica da importare',
+      path: ['import_fase'],
+    })
+    return // le validazioni successive dipendono dalla fase
+  }
+
+  const faseIdx = FASI.indexOf(d.import_fase)
+
+  // Fase ≥ richiesta_proforma (idx 2) → data_verifica obbligatoria
+  if (faseIdx >= 2 && !d.data_verifica) {
+    ctx.addIssue({
+      code: 'custom',
+      message: 'Data verifica obbligatoria per pratiche dalla fase Richiesta Proforma in poi',
+      path: ['data_verifica'],
+    })
+  }
+
+  // Fase = completata → completata_at obbligatoria
+  if (d.import_fase === 'completata' && !d.import_completata_at) {
+    ctx.addIssue({
+      code: 'custom',
+      message: 'Data completamento obbligatoria per pratiche completate',
+      path: ['import_completata_at'],
     })
   }
 })

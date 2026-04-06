@@ -4,7 +4,7 @@
  * Eseguita ogni giorno alle 07:00 UTC (08:00 ora di Roma).
  * Cron expression: 0 7 * * *
  *
- * Tre responsabilità:
+ * Quattro responsabilità:
  *
  * A) SAFETY NET PROMEMORIA ORFANI
  *    Pratiche completate (completata=true) con sorveglianza_reminder_creato=false
@@ -12,14 +12,19 @@
  *    Il cron li crea in recovery con la stessa logica del trigger on_pratica_completata.
  *    SA8000 → +1095 giorni (36 mesi), altre norme → +365 giorni (12 mesi).
  *
- * B) NOTIFICHE ESCALATION SCADENZE (5 livelli)
+ * B) NOTIFICHE ESCALATION SCADENZE PRATICHE (5 livelli)
  *    Per ogni pratica attiva con data_scadenza: 60 / 30 / 14 / 7 / 1 giorni.
  *    Soglia 0 (scadenza superata) → notifica tutti gli admin + assegnato_a.
  *    La tabella notifiche_scadenza_inviate garantisce idempotenza (no duplicati).
  *
- * C) PROMEMORIA SCADUTI
+ * C) PROMEMORIA SCADUTI (daily reminder)
  *    Promemoria non completati con data_scadenza <= oggi.
  *    Notifica una sola volta al giorno per promemoria (dedup via messaggio).
+ *
+ * D) ESCALATION PRE-SCADENZA PROMEMORIA (5 livelli)
+ *    Per ogni promemoria non completato con data_scadenza: 60 / 30 / 14 / 7 / 1 giorni.
+ *    Soglia 0 (scaduto) → notifica admin + assegnato_a.
+ *    La tabella notifiche_promemoria_escalation garantisce idempotenza.
  *
  * Sicurezza: usa SUPABASE_SERVICE_ROLE_KEY (lato server, mai esposta al frontend).
  * Bypassa RLS per leggere tutte le pratiche e inserire notifiche senza auth.uid().
@@ -94,6 +99,16 @@ interface PromemoriaScaduto {
   pratica_id: string | null
 }
 
+interface PromemoriaPerEscalation {
+  id: string
+  testo: string
+  data_scadenza: string
+  assegnato_a: string
+  pratica_id: string | null
+  pratiche: { numero_pratica: string; clienti: ClienteInfo | null } | null
+  notifiche_promemoria_escalation: TrackingRecord[]
+}
+
 interface AdminProfile {
   id: string
 }
@@ -148,6 +163,7 @@ Deno.serve(async (_req: Request): Promise<Response> => {
     parteA: { trovati: 0, creati: 0, errori: 0 },
     parteB: { pratiche: 0, notifiche_inviate: 0, errori: 0 },
     parteC: { promemoria_scaduti: 0, notifiche_inviate: 0, errori: 0 },
+    parteD: { promemoria: 0, notifiche_inviate: 0, errori: 0 },
     eseguito_at: new Date().toISOString(),
   }
 
@@ -267,6 +283,16 @@ Deno.serve(async (_req: Request): Promise<Response> => {
     if (adminErr) throw adminErr
     const adminIds = ((adminsRaw ?? []) as AdminProfile[]).map((a) => a.id)
 
+    // Responsabili da notificare su tutte le soglie (insieme ad assegnato_a)
+    const { data: responsabiliRaw, error: respErr } = await supabase
+      .from('user_profiles')
+      .select('id')
+      .eq('ruolo', 'responsabile')
+      .eq('attivo', true)
+
+    if (respErr) throw respErr
+    const responsabileIds = ((responsabiliRaw ?? []) as AdminProfile[]).map((a) => a.id)
+
     // Pratiche attive, NON completate, con data_scadenza valorizzata + tracking già inviati.
     // .eq('completata', false) esclude pratiche con fase='completata' che hanno
     // ancora stato='attiva' — il lavoro è finito, non servono notifiche di scadenza.
@@ -309,9 +335,12 @@ Deno.serve(async (_req: Request): Promise<Response> => {
           pratica.data_scadenza, giorni,
         )
 
-        // Destinatari base: assegnato_a o fallback admin se mancante
-        const destinatariBase: string[] =
-          pratica.assegnato_a ? [pratica.assegnato_a] : adminIds
+        // Destinatari base: assegnato_a + responsabili (dedup via Set)
+        // Se assegnato_a manca → fallback admin
+        const destinatariBase = [...new Set<string>([
+          ...(pratica.assegnato_a ? [pratica.assegnato_a] : adminIds),
+          ...responsabileIds,
+        ])]
 
         // ── Soglie normali: 60, 30, 14, 7, 1 ──────────────────────────────
         for (const soglia of SOGLIE_ESCALATION) {
@@ -348,11 +377,12 @@ Deno.serve(async (_req: Request): Promise<Response> => {
           )
         }
 
-        // ── Soglia 0: scadenza superata → admin + assegnato_a ─────────────
+        // ── Soglia 0: scadenza superata → admin + responsabili + assegnato_a
         if (giorni <= 0 && !soglieGiaInviate.has(0)) {
           const cfg = SOGLIA_CONFIG[0]
           const destinatariScaduti = new Set<string>([
             ...adminIds,
+            ...responsabileIds,
             ...(pratica.assegnato_a ? [pratica.assegnato_a] : []),
           ])
 
@@ -459,6 +489,171 @@ Deno.serve(async (_req: Request): Promise<Response> => {
     }
   } catch (err) {
     console.error('[ParteC] Errore generale:', err)
+  }
+
+  // ════════════════════════════════════════════════════════════════════════════
+  // PARTE D — ESCALATION PRE-SCADENZA PROMEMORIA
+  // Stessa logica della Parte B ma applicata ai promemoria (sorveglianza e non).
+  // Soglie: 60 / 30 / 14 / 7 / 1 giorni prima + 0 (scaduto).
+  // Tracking via notifiche_promemoria_escalation (PK: promemoria_id, giorni_soglia).
+  // ════════════════════════════════════════════════════════════════════════════
+
+  try {
+    // Admin (riusati dalla Parte B se già caricati, altrimenti caricati qui)
+    let adminIdsD: string[]
+    let responsabileIdsD: string[]
+    try {
+      // Ricarichiamo admin e responsabili — query leggere, evita variabili globali cross-scope
+      const [adminsRes, respRes] = await Promise.all([
+        supabase.from('user_profiles').select('id').eq('ruolo', 'admin').eq('attivo', true),
+        supabase.from('user_profiles').select('id').eq('ruolo', 'responsabile').eq('attivo', true),
+      ])
+
+      if (adminsRes.error) throw adminsRes.error
+      if (respRes.error) throw respRes.error
+      adminIdsD = ((adminsRes.data ?? []) as AdminProfile[]).map((a) => a.id)
+      responsabileIdsD = ((respRes.data ?? []) as AdminProfile[]).map((a) => a.id)
+    } catch (err) {
+      console.error('[ParteD] Errore caricamento admin/responsabili:', err)
+      adminIdsD = []
+      responsabileIdsD = []
+    }
+
+    // Promemoria non completati, con data_scadenza, con assegnato_a + tracking
+    const { data: promRaw, error: promErr } = await supabase
+      .from('promemoria')
+      .select(`
+        id,
+        testo,
+        data_scadenza,
+        assegnato_a,
+        pratica_id,
+        pratiche(numero_pratica, clienti:clienti(nome)),
+        notifiche_promemoria_escalation(giorni_soglia)
+      `)
+      .eq('completato', false)
+      .not('data_scadenza', 'is', null)
+      .not('assegnato_a', 'is', null)
+
+    if (promErr) throw promErr
+
+    const promemoria = (promRaw ?? []) as PromemoriaPerEscalation[]
+    risultati.parteD.promemoria = promemoria.length
+    console.log(`[ParteD] Promemoria da controllare: ${promemoria.length}`)
+
+    for (const prom of promemoria) {
+      try {
+        const giorni = calcolaGiorniRimanenti(prom.data_scadenza)
+
+        // Set di soglie già tracciate
+        const soglieGiaInviate = new Set(
+          prom.notifiche_promemoria_escalation.map((r) => r.giorni_soglia),
+        )
+
+        // Contesto per il messaggio
+        const numeroPratica = prom.pratiche?.numero_pratica ?? '—'
+        const clienteNome = prom.pratiche?.clienti?.nome ?? ''
+        const testoTroncato = prom.testo.length > 80
+          ? prom.testo.substring(0, 79) + '…'
+          : prom.testo
+
+        // Messaggio di notifica
+        const dataFmt = formatData(prom.data_scadenza)
+        const contestoPratica = numeroPratica !== '—'
+          ? ` (pratica ${numeroPratica}${clienteNome ? ` — ${clienteNome}` : ''})`
+          : ''
+
+        const messaggio = giorni <= 0
+          ? `Il promemoria "${prom.testo}" è SCADUTO il ${dataFmt}${contestoPratica}.`
+          : `Il promemoria "${prom.testo}" scade il ${dataFmt} (tra ${giorni} giorni)${contestoPratica}.`
+
+        // Destinatari base: assegnato_a + responsabili (dedup via Set)
+        const destinatariBase = [...new Set<string>([
+          prom.assegnato_a,
+          ...responsabileIdsD,
+        ])]
+
+        // ── Soglie normali: 60, 30, 14, 7, 1 ──────────────────────────────
+        for (const soglia of SOGLIE_ESCALATION) {
+          if (giorni > soglia) continue
+          if (soglieGiaInviate.has(soglia)) continue
+
+          const tipoNotifica = soglia <= 7 ? 'critical' : soglia <= 30 ? 'warning' : 'info'
+          const titoloPrefisso = soglia === 1
+            ? 'URGENTISSIMO — Scadenza DOMANI'
+            : soglia === 7
+            ? `URGENTE — Scadenza tra ${soglia} giorni`
+            : `Scadenza tra ${soglia <= 30 ? soglia + ' giorni' : '2 mesi'}`
+
+          for (const destId of destinatariBase) {
+            const { error: notifErr } = await supabase
+              .from('notifiche')
+              .insert({
+                destinatario_id: destId,
+                pratica_id:      prom.pratica_id,
+                tipo:            tipoNotifica,
+                titolo:          `${titoloPrefisso}: ${testoTroncato}`,
+                messaggio,
+              })
+            if (notifErr) throw notifErr
+          }
+
+          // Traccia l'invio
+          const { error: trackErr } = await supabase
+            .from('notifiche_promemoria_escalation')
+            .upsert(
+              { promemoria_id: prom.id, giorni_soglia: soglia },
+              { onConflict: 'promemoria_id,giorni_soglia', ignoreDuplicates: true },
+            )
+          if (trackErr) throw trackErr
+
+          risultati.parteD.notifiche_inviate++
+          console.log(
+            `[ParteD] Notifica soglia ${soglia}gg → promemoria ${prom.id.substring(0, 8)}`,
+          )
+        }
+
+        // ── Soglia 0: scaduto → admin + responsabili + assegnato_a ─────────
+        if (giorni <= 0 && !soglieGiaInviate.has(0)) {
+          const destinatariScaduti = new Set<string>([
+            ...adminIdsD,
+            ...responsabileIdsD,
+            prom.assegnato_a,
+          ])
+
+          for (const destId of destinatariScaduti) {
+            const { error: notifErr } = await supabase
+              .from('notifiche')
+              .insert({
+                destinatario_id: destId,
+                pratica_id:      prom.pratica_id,
+                tipo:            'critical',
+                titolo:          `PROMEMORIA SCADUTO: ${testoTroncato}`,
+                messaggio,
+              })
+            if (notifErr) throw notifErr
+          }
+
+          const { error: trackErr } = await supabase
+            .from('notifiche_promemoria_escalation')
+            .upsert(
+              { promemoria_id: prom.id, giorni_soglia: 0 },
+              { onConflict: 'promemoria_id,giorni_soglia', ignoreDuplicates: true },
+            )
+          if (trackErr) throw trackErr
+
+          risultati.parteD.notifiche_inviate++
+          console.log(
+            `[ParteD] Notifica scaduto → promemoria ${prom.id.substring(0, 8)}`,
+          )
+        }
+      } catch (err) {
+        console.error(`[ParteD] Errore promemoria ${prom.id}:`, err)
+        risultati.parteD.errori++
+      }
+    }
+  } catch (err) {
+    console.error('[ParteD] Errore generale:', err)
   }
 
   // ── Riepilogo ──────────────────────────────────────────────────────────────

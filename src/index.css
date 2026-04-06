@@ -57,32 +57,33 @@
     --sidebar-accent-foreground:    228 40% 88%;  /* #D0D8F0 */
     --sidebar-border:               229 43% 15%;  /* #181B34 */
     --sidebar-ring:                 213 100% 46%;
+    --sidebar-active:               229 47% 13%;  /* #181B34 */
   }
 
   .dark {
-    /* ── Dark mode ────────────────────────────────────────────────── */
-    --background:           228 26% 25%;        /* #30324E */
-    --foreground:           228 10% 83%;        /* #CDD0DA */
-    --card:                 231 20% 33%;        /* #424566 — più chiaro per contrasto */
-    --card-foreground:      228 10% 83%;
-    --popover:              231 20% 33%;
-    --popover-foreground:   228 10% 83%;
-    --primary:              213 100% 46%;
+    /* ── Dark mode — exact evalisdesk palette (monday.com style) ──── */
+    --background:           228 26% 25%;        /* #30324E main content */
+    --foreground:           33 90% 88%;         /* #FEE5C3 warm cream text */
+    --card:                 231 20% 28%;        /* #393B53 card surface */
+    --card-foreground:      33 90% 88%;
+    --popover:              228 26% 25%;        /* = background */
+    --popover-foreground:   228 10% 83%;        /* #C3C6CE */
+    --primary:              213 100% 46%;       /* #0073EA */
     --primary-foreground:   0 0% 100%;
-    --secondary:            263 46% 47%;
+    --secondary:            263 46% 47%;        /* #6645A9 */
     --secondary-foreground: 0 0% 100%;
-    --muted:                230 22% 33%;        /* #434766 */
+    --muted:                230 22% 33%;
     --muted-foreground:     228 8% 62%;         /* #8C8F9D */
     --accent:               228 28% 30%;
-    --accent-foreground:    228 10% 83%;
-    --destructive:          351 75% 62%;
+    --accent-foreground:    33 90% 88%;         /* warm cream */
+    --destructive:          351 75% 62%;        /* #E8697D */
     --destructive-foreground: 0 0% 100%;
-    --border:               229 30% 38%;        /* bordo visibile in dark */
+    --border:               229 43% 15%;        /* #181B34 — sottile come evalisdesk */
     --input:                229 22% 32%;
     --ring:                 213 100% 46%;
-    --success:              151 64% 51%;
+    --success:              151 64% 51%;        /* #33D391 */
     --success-foreground:   0 0% 100%;
-    --warning:              37 97% 69%;
+    --warning:              37 97% 69%;         /* #FDBC64 */
     --warning-foreground:   225 15% 15%;
     --phase-1:              213 100% 46%;
     --phase-2:              263 46% 47%;
@@ -99,10 +100,11 @@
     --sidebar-foreground:           225 10% 78%;
     --sidebar-primary:              213 100% 46%;
     --sidebar-primary-foreground:   0 0% 100%;
-    --sidebar-accent:               228 28% 23%;
+    --sidebar-accent:               228 28% 23%;  /* #2F3149 */
     --sidebar-accent-foreground:    228 40% 88%;
     --sidebar-border:               229 43% 15%;
     --sidebar-ring:                 213 100% 46%;
+    --sidebar-active:               229 47% 13%;  /* #181B34 */
   }
 }
 
@@ -156,6 +158,7 @@
   --color-sidebar-accent-foreground:  hsl(var(--sidebar-accent-foreground));
   --color-sidebar-border:             hsl(var(--sidebar-border));
   --color-sidebar-ring:               hsl(var(--sidebar-ring));
+  --color-sidebar-active:             hsl(var(--sidebar-active, var(--sidebar-accent)));
   /* Radius */
   --radius-sm:  calc(var(--radius) - 4px);
   --radius-md:  calc(var(--radius) - 2px);

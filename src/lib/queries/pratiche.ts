@@ -185,6 +185,25 @@ export async function getPratica(id: string): Promise<PraticaConRelazioni> {
   } as PraticaConRelazioni
 }
 
+// ── Verifica duplicati ──────────────────────────────────────────
+
+/**
+ * Controlla se un numero_pratica esiste già nel DB.
+ * Usata per check UX pre-submit nel form importazione.
+ */
+export async function checkNumeroPraticaExists(numeroPratica: string): Promise<boolean> {
+  const trimmed = numeroPratica.trim()
+  if (!trimmed) return false
+
+  const { count, error } = await supabase
+    .from('pratiche')
+    .select('id', { count: 'exact', head: true })
+    .eq('numero_pratica', trimmed)
+
+  if (error) return false // In caso di errore, lascia passare — il DB constraint proteggerà
+  return (count ?? 0) > 0
+}
+
 // ── Scrittura ────────────────────────────────────────────────────
 
 /**
@@ -192,8 +211,13 @@ export async function getPratica(id: string): Promise<PraticaConRelazioni> {
  * Il numero_pratica viene generato dal trigger set_numero_pratica (BEFORE INSERT).
  * Se fornite, inserisce le norme in pratiche_norme dopo la creazione.
  *
- * ATTENZIONE: non è atomico — se l'inserimento norme fallisce,
- * la pratica esiste già senza norme. Accettabile per questo use case.
+ * Import completata: se la pratica viene creata con fase = 'completata' e
+ * sorveglianza_reminder_creato = true, il trigger on_pratica_completata NON
+ * scatta (è BEFORE UPDATE, non INSERT). Il promemoria sorveglianza viene
+ * creato qui usando data_scadenza fornita dall'utente — nessun calcolo automatico.
+ *
+ * ATTENZIONE: non è atomico — se l'inserimento norme/promemoria fallisce,
+ * la pratica esiste già. Accettabile per questo use case.
  */
 export async function createPratica({ norme, ...praticaData }: CreatePraticaData) {
   const { data: created, error } = await supabase
@@ -202,7 +226,13 @@ export async function createPratica({ norme, ...praticaData }: CreatePraticaData
     .select()
     .single()
 
-  if (error) throw new Error(`Errore nella creazione della pratica: ${error.message}`)
+  if (error) {
+    // Messaggio leggibile per errore duplicato numero_pratica
+    if (error.code === '23505' && error.message.includes('numero_pratica')) {
+      throw new Error('Numero pratica già esistente. Usa un numero diverso o lascia vuoto per auto-generazione.')
+    }
+    throw new Error(`Errore nella creazione della pratica: ${error.message}`)
+  }
   if (!created) throw new Error('Creazione pratica fallita: nessun dato restituito')
 
   if (norme && norme.length > 0) {
@@ -212,6 +242,36 @@ export async function createPratica({ norme, ...praticaData }: CreatePraticaData
       throw new Error(
         `Pratica creata ma errore nel salvataggio delle norme: ${normeError.message}`
       )
+    }
+  }
+
+  // ── Import completata: promemoria sorveglianza manuale ─────────
+  // Il trigger on_pratica_completata NON scatta su INSERT.
+  // Creiamo il promemoria solo se l'utente ha fornito data_scadenza.
+  // Insert diretto (non createPromemoria) per evitare side-effect notifica.
+  // creato_da è NOT NULL nel DB — serve un utente valido
+  const promCreator = created.assegnato_a ?? created.created_by
+  if (
+    created.fase === 'completata' &&
+    created.sorveglianza_reminder_creato === true &&
+    created.data_scadenza &&
+    promCreator
+  ) {
+    const normeLabel = norme && norme.length > 0
+      ? norme.join(' + ')
+      : 'importata'
+
+    const { error: promError } = await supabase.from('promemoria').insert({
+      pratica_id:    created.id,
+      creato_da:     promCreator,
+      assegnato_a:   promCreator,
+      testo:         `Sorveglianza ${normeLabel} per pratica ${created.numero_pratica ?? 'importata'} — verificare scadenza ciclo certificativo`,
+      data_scadenza: created.data_scadenza,
+    })
+
+    // Best-effort: se il promemoria fallisce non blocca la creazione pratica
+    if (promError) {
+      console.warn('Promemoria sorveglianza non creato:', promError.message)
     }
   }
 
