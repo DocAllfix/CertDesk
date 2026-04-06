@@ -295,7 +295,12 @@ export default function DashboardPage() {
                     scadenzeUrgenti.map((p) => (
                       <tr
                         key={p.id}
-                        className="border-b border-border/50 last:border-0 hover:bg-muted/30 transition-colors"
+                        className="border-b border-border/50 last:border-0 hover:bg-muted/30 transition-colors cursor-pointer"
+                        onClick={(e) => {
+                          const target = e.target as HTMLElement
+                          if (target.closest('a, button')) return
+                          navigate(`/pratiche/${p.id}`)
+                        }}
                       >
                         <td className="px-5 py-3">
                           <span className="text-sm font-medium text-foreground">
@@ -424,7 +429,12 @@ export default function DashboardPage() {
               {miePratiche.map((p) => (
                 <div
                   key={p.id}
-                  className="bg-card rounded-lg border border-border px-4 py-3 flex items-center justify-between gap-4 hover:shadow-sm transition-shadow"
+                  className="bg-card rounded-lg border border-border px-4 py-3 flex items-center justify-between gap-4 hover:shadow-sm transition-shadow cursor-pointer"
+                  onClick={(e) => {
+                    const target = e.target as HTMLElement
+                    if (target.closest('a, button')) return
+                    navigate(`/pratiche/${p.id}`)
+                  }}
                 >
                   <div className="flex items-center gap-3 min-w-0">
                     <div className="min-w-0">

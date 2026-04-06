@@ -77,7 +77,7 @@ export function NotificheBadgeSidebar({ onClick, collapsed }: SidebarBadgeProps)
         <TooltipTrigger asChild>
           <button
             onClick={onClick}
-            className="w-full flex items-center justify-center px-3 py-2 rounded-md text-sidebar-foreground hover:bg-sidebar-accent/70 hover:text-sidebar-accent-foreground transition-all duration-150 relative"
+            className="w-full flex items-center justify-center px-3 py-2 rounded-md text-sidebar-foreground hover:bg-sidebar-accent/70 hover:text-sidebar-accent-foreground transition-all duration-150 relative cursor-pointer"
           >
             <Bell className="w-4 h-4" strokeWidth={1.75} />
             <BadgeCount count={count} position="sidebar-collapsed" />
@@ -91,7 +91,7 @@ export function NotificheBadgeSidebar({ onClick, collapsed }: SidebarBadgeProps)
   return (
     <button
       onClick={onClick}
-      className="w-full flex items-center gap-3 px-3 py-2 rounded-md text-sidebar-foreground hover:bg-sidebar-accent/70 hover:text-sidebar-accent-foreground transition-all duration-150"
+      className="w-full flex items-center gap-3 px-3 py-2 rounded-md text-sidebar-foreground hover:bg-sidebar-accent/70 hover:text-sidebar-accent-foreground transition-all duration-150 cursor-pointer"
     >
       <div className="relative shrink-0">
         <Bell className="w-4 h-4" strokeWidth={1.75} />

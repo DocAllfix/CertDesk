@@ -21,6 +21,7 @@ import {
   DndContext,
   DragOverlay,
   PointerSensor,
+  KeyboardSensor,
   useSensor,
   useSensors,
   closestCenter,
@@ -34,7 +35,7 @@ import { PIPELINE_FASI }   from '@/components/pipeline/KanbanColumn'
 import { usePratiche, useAvanzaFase } from '@/hooks/usePratiche'
 import { useTeamMembers }  from '@/hooks/useTeamMembers'
 import { useAuth }         from '@/hooks/useAuth'
-import { canAdvanceFase }  from '@/lib/workflow'
+import { canAdvanceFase, getNextFase }  from '@/lib/workflow'
 
 import type { PraticaListItem, FiltriPratiche, FaseType } from '@/types/app.types'
 import type { Tables } from '@/lib/supabase'
@@ -196,9 +197,16 @@ export default function PipelinePage() {
     })
   }, [praticheRaw, searchQuery])
 
-  // Raggruppa per fase
-  const pratichePerFase = (fase: string) =>
-    pratiche.filter(p => p.fase === fase)
+  // Raggruppa per fase — memoizzato per evitare ricalcoli ad ogni render
+  const praticheMap = useMemo(() => {
+    const map: Record<string, PraticaListItem[]> = {}
+    for (const config of PIPELINE_FASI) {
+      map[config.fase] = pratiche.filter(p => p.fase === config.fase)
+    }
+    return map
+  }, [pratiche])
+
+  const pratichePerFase = (fase: string) => praticheMap[fase] ?? []
 
   // ── DnD ────────────────────────────────────────────────────────
 
@@ -206,6 +214,7 @@ export default function PipelinePage() {
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(KeyboardSensor),
   )
 
   const activePratica = activeDragId
@@ -243,9 +252,29 @@ export default function PipelinePage() {
     })
   }
 
-  // Handler avanza da bottone (navigazione al dettaglio)
+  // Handler avanza da bottone — avanzamento diretto con conferma
   const handleAvanza = (p: PraticaListItem) => {
-    window.location.href = `/pratiche/${p.id}`
+    if (!user) return
+    const nextFase = getNextFase(p.fase)
+    if (!nextFase) return
+
+    const validation = canAdvanceFase(p, nextFase)
+    if (!validation.canAdvance) {
+      alert(`Non è possibile avanzare: ${validation.missingPrereqs.join(', ')}`)
+      return
+    }
+
+    const clienteNome = p.cliente?.nome ?? p.cliente?.ragione_sociale ?? ''
+    if (!window.confirm(`Avanzare "${clienteNome}" da ${p.fase} a ${nextFase}?`)) return
+
+    avanzaFase.mutate({
+      id: p.id,
+      oldFase: p.fase,
+      nuovaFase: nextFase,
+      userId: user.id,
+      allUsers: team.map(t => ({ id: t.id, ruolo: t.ruolo, nome: t.nome, cognome: t.cognome })),
+      clienteNome: clienteNome || undefined,
+    })
   }
 
   // ── Render ─────────────────────────────────────────────────────

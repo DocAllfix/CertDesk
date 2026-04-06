@@ -24,7 +24,7 @@ import {
 import { PraticaRow }   from '@/components/pratiche/PraticaRow'
 import { PraticaModal } from '@/components/pratiche/PraticaModal'
 
-import { usePratiche, useSospendiPratica, useArchiviaPratica, usePrefetchPratica } from '@/hooks/usePratiche'
+import { usePratiche, useSospendiPratica, useArchiviaPratica, useAnnullaPratica, usePrefetchPratica } from '@/hooks/usePratiche'
 import { usePratica }      from '@/hooks/usePratiche'
 import { useTeamMembers }  from '@/hooks/useTeamMembers'
 import { useAuth }         from '@/hooks/useAuth'
@@ -203,17 +203,17 @@ export default function PratichePage() {
   }
 
   // ── Build filtri query ────────────────────────────────────────
+  // Non filtra per fase a livello server per permettere il conteggio
+  // corretto di entrambe le tab (attive + completate). Il filtro tab
+  // viene applicato client-side su praticheFiltrate.
   const filtriQuery: FiltriPratiche = {
     ...(ricerca      ? { ricerca }                     : {}),
-    ...(tab === 'completate'
-          ? { fase: 'completata' as FaseType }
-          : fase ? { fase } : {}),
+    ...(fase         ? { fase }                        : {}),
     ...(ciclo        ? { ciclo }                       : {}),
     ...(norma        ? { norma_codice: norma }         : {}),
-    // Default: tab "attive" filtra stato='attiva' (esclude sospese/annullate)
+    // Default: stato='attiva' (esclude sospese/annullate)
     // Se l'utente seleziona un filtro stato esplicito, usa quello
-    ...(stato        ? { stato }
-      : tab === 'attive' ? { solo_attive: true }       : {}),
+    ...(stato        ? { stato }                       : { solo_attive: true }),
     ...(assegnato    ? { assegnato_a: assegnato }      : {}),
     ...(scadenzaMax  ? { scadenza_max: scadenzaMax }   : {}),
   }
@@ -221,14 +221,20 @@ export default function PratichePage() {
   const { data: rawData = [], isLoading, error } = usePratiche(filtriQuery)
   const sospendiMut = useSospendiPratica()
   const archiviaMut = useArchiviaPratica()
+  const annullaMut  = useAnnullaPratica()
+
+  // ── State per modal elimina (soft-delete = annulla con motivo) ──
+  const [eliminaTarget, setEliminaTarget] = useState<PraticaListItem | null>(null)
+  const [eliminaMotivo, setEliminaMotivo] = useState('')
 
   // ── Trasformazione + client-filter ───────────────────────────
   const praticheRaw = rawData as unknown as PraticaListRaw[]
 
-  // Tab "attive" = tutte le fasi eccetto completata (completata ha la sua tab)
+  // Tab "attive" = tutte le fasi eccetto completata
+  // Tab "completate" = solo fase completata
   const praticheFiltrate = tab === 'attive'
     ? praticheRaw.filter(p => p.fase !== 'completata')
-    : praticheRaw
+    : praticheRaw.filter(p => p.fase === 'completata')
 
   // ── Paginazione client-side ───────────────────────────────────
   const totale      = praticheFiltrate.length
@@ -255,9 +261,20 @@ export default function PratichePage() {
     }
   }
 
-  const handleAnnulla = async (p: PraticaListItem) => {
-    // Implementazione completa con modal motivo prevista in F6
-    navigate(`/pratiche/${p.id}`)
+  const handleAnnulla = (p: PraticaListItem) => {
+    setEliminaTarget(p)
+    setEliminaMotivo('')
+  }
+
+  const handleConfirmElimina = async () => {
+    if (!eliminaTarget || !eliminaMotivo.trim()) return
+    try {
+      await annullaMut.mutateAsync({ id: eliminaTarget.id, motivo: eliminaMotivo.trim() })
+      setEliminaTarget(null)
+      setEliminaMotivo('')
+    } catch (err) {
+      alert((err as Error).message)
+    }
   }
 
   const handleArchivia = async (p: PraticaListItem) => {
@@ -470,11 +487,13 @@ export default function PratichePage() {
                     key={p.id}
                     pratica={p}
                     isAdmin={isAdmin}
+                    isResponsabile={isResponsabile}
                     onModifica={handleModifica}
                     onAvanza={handleAvanza}
                     onSospendi={handleSospendi}
                     onAnnulla={handleAnnulla}
                     onArchivia={handleArchivia}
+                    onElimina={handleAnnulla}
                     onPrefetch={prefetchPratica}
                   />
                 ))}
@@ -522,6 +541,54 @@ export default function PratichePage() {
           praticaId={editId}
           onClose={() => setEditId(null)}
         />
+      )}
+
+      {/* Modal conferma eliminazione (soft-delete = annulla con motivo) */}
+      {eliminaTarget && (
+        <>
+          <div
+            className="fixed inset-0 bg-black/40 backdrop-blur-[2px] z-50"
+            onClick={() => setEliminaTarget(null)}
+          />
+          <div className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-50 w-full max-w-md bg-card rounded-xl border border-border shadow-2xl p-6">
+            <h3 className="text-lg font-semibold text-foreground mb-1">
+              Elimina pratica
+            </h3>
+            <p className="text-sm text-muted-foreground mb-4">
+              La pratica <strong>{eliminaTarget.numero_pratica ?? eliminaTarget.id}</strong> verrà annullata.
+              Questa azione è reversibile dall'archivio.
+            </p>
+            <label className="text-sm font-medium text-foreground">
+              Motivo (obbligatorio)
+            </label>
+            <textarea
+              value={eliminaMotivo}
+              onChange={e => setEliminaMotivo(e.target.value)}
+              placeholder="Inserisci il motivo dell'eliminazione..."
+              className="mt-1.5 w-full rounded-lg border border-border bg-muted/40 px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 resize-none"
+              rows={3}
+              maxLength={500}
+              autoFocus
+            />
+            <div className="flex items-center justify-end gap-2 mt-4">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setEliminaTarget(null)}
+              >
+                Annulla
+              </Button>
+              <Button
+                variant="destructive"
+                size="sm"
+                disabled={!eliminaMotivo.trim() || annullaMut.isPending}
+                onClick={handleConfirmElimina}
+              >
+                {annullaMut.isPending ? 'Eliminazione...' : 'Conferma eliminazione'}
+              </Button>
+            </div>
+          </div>
+        </>
       )}
 
     </div>

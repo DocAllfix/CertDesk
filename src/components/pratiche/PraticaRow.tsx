@@ -8,8 +8,8 @@
  * Design ref: ../evalisdesk-ref/src/pages/Pratiche.jsx (tabella rows)
  */
 import { memo } from 'react'
-import { Link } from 'react-router-dom'
-import { ExternalLink, Pencil, ChevronRight, PauseCircle, XCircle, MoreHorizontal, Sparkles, Check, Archive } from 'lucide-react'
+import { Link, useNavigate } from 'react-router-dom'
+import { ExternalLink, Pencil, ChevronRight, PauseCircle, XCircle, MoreHorizontal, Sparkles, Check, Archive, Trash2 } from 'lucide-react'
 import { differenceInDays, parseISO } from 'date-fns'
 
 import { BadgeFase } from '@/components/shared/BadgeFase'
@@ -32,11 +32,13 @@ import type { PraticaListItem } from '@/types/app.types'
 interface PraticaRowProps {
   pratica:    PraticaListItem
   isAdmin:    boolean
+  isResponsabile?: boolean
   onModifica: (pratica: PraticaListItem) => void
   onAvanza?:  (pratica: PraticaListItem) => void
   onSospendi?: (pratica: PraticaListItem) => void
   onAnnulla?:  (pratica: PraticaListItem) => void
   onArchivia?: (pratica: PraticaListItem) => void
+  onElimina?:  (pratica: PraticaListItem) => void
   onPrefetch?: (id: string) => void
 }
 
@@ -96,20 +98,31 @@ function ChecklistCompatta({ pratica }: { pratica: PraticaListItem }) {
 export const PraticaRow = memo(function PraticaRow({
   pratica,
   isAdmin,
+  isResponsabile,
   onModifica,
   onAvanza,
   onSospendi,
   onAnnulla,
   onArchivia,
+  onElimina,
   onPrefetch,
 }: PraticaRowProps) {
   const urgente = isUrgente(pratica.data_scadenza)
+  const navigate = useNavigate()
+
+  const handleRowClick = (e: React.MouseEvent<HTMLTableRowElement>) => {
+    // Non navigare se click su elementi interattivi (button, link, input, dropdown)
+    const target = e.target as HTMLElement
+    if (target.closest('button, a, input, [role="menuitem"], [data-radix-collection-item]')) return
+    navigate(`/pratiche/${pratica.id}`)
+  }
 
   return (
     <tr
-      className={`border-b border-border/40 last:border-0 hover:bg-muted/20 transition-colors group
+      className={`border-b border-border/40 last:border-0 hover:bg-muted/20 transition-colors group cursor-pointer
         border-l-2 ${urgente ? 'border-l-destructive' : 'border-l-transparent'}`}
       onMouseEnter={() => onPrefetch?.(pratica.id)}
+      onClick={handleRowClick}
     >
       {/* Checkbox */}
       <td className="px-3 py-2.5">
@@ -269,6 +282,19 @@ export const PraticaRow = memo(function PraticaRow({
                   >
                     <Archive className="w-3.5 h-3.5" />
                     Archivia
+                  </DropdownMenuItem>
+                </>
+              )}
+
+              {onElimina && (isAdmin || isResponsabile) && pratica.stato === 'attiva' && (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onClick={() => onElimina(pratica)}
+                    className="gap-2 cursor-pointer text-destructive focus:text-destructive"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    Elimina
                   </DropdownMenuItem>
                 </>
               )}

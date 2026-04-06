@@ -9,7 +9,7 @@
  *             ../evalisdesk-ref/src/components/dettaglio/
  *             ../evalisdesk-ref/src/components/shared/PhaseStepper.jsx
  */
-import { useState } from 'react'
+import { useState, useCallback } from 'react'
 import { Link } from 'react-router-dom'
 import {
   ArrowLeft, ChevronRight, Sparkles, Check,
@@ -30,6 +30,8 @@ import { StatoPraticaBanner }    from './StatoPraticaBanner'
 import { AllegatiSection }       from '@/components/allegati'
 import { PromemoriaSection }    from './PromemoriaSection'
 import { FeedPratica }          from './FeedPratica'
+import { useUpdatePratica }     from '@/hooks/usePratiche'
+import { toast }                from 'sonner'
 
 import type { PraticaConRelazioni, FaseType } from '@/types/app.types'
 
@@ -100,6 +102,22 @@ interface PraticaDettaglioProps {
 export function PraticaDettaglio({ pratica }: PraticaDettaglioProps) {
   const [editOpen,   setEditOpen]   = useState(false)
   const [avanzaOpen, setAvanzaOpen] = useState(false)
+  const updatePraticaMut = useUpdatePratica()
+
+  const handleToggleFlag = useCallback((field: 'proforma_richiesta' | 'proforma_emessa' | 'documenti_ricevuti', currentValue: boolean | null) => {
+    const newValue = !currentValue
+    updatePraticaMut.mutate(
+      { id: pratica.id, data: { [field]: newValue } },
+      {
+        onError: (err: Error) => {
+          toast.error('Errore aggiornamento', { description: err.message })
+        },
+        onSuccess: () => {
+          toast.success(newValue ? 'Flag attivato' : 'Flag disattivato')
+        },
+      },
+    )
+  }, [pratica.id, updatePraticaMut])
 
   const faseAttuale  = pratica.fase
   const faseOrdine   = FASE_ORDINE[faseAttuale]
@@ -328,14 +346,14 @@ export function PraticaDettaglio({ pratica }: PraticaDettaglioProps) {
     </div>
   )
 
-  // ── Colonna destra: Checklist flag ────────────────────────────
+  // ── Colonna destra: Checklist flag (cliccabile) ────────────────
 
   const renderChecklist = () => {
-    type CheckItem = { label: string; value: boolean | null }
+    type CheckItem = { label: string; value: boolean | null; field: 'proforma_richiesta' | 'proforma_emessa' | 'documenti_ricevuti' }
     const items: CheckItem[] = [
-      { label: 'Proforma richiesta', value: pratica.proforma_richiesta },
-      { label: 'Proforma emessa',    value: pratica.proforma_emessa    },
-      { label: 'Documenti ricevuti', value: pratica.documenti_ricevuti },
+      { label: 'Proforma richiesta', value: pratica.proforma_richiesta, field: 'proforma_richiesta' },
+      { label: 'Proforma emessa',    value: pratica.proforma_emessa,    field: 'proforma_emessa'    },
+      { label: 'Documenti ricevuti', value: pratica.documenti_ricevuti, field: 'documenti_ricevuti' },
     ]
 
     return (
@@ -344,14 +362,19 @@ export function PraticaDettaglio({ pratica }: PraticaDettaglioProps) {
           <h3 className="font-semibold text-foreground">Checklist</h3>
         </div>
         <div className="p-5 space-y-2">
-          {items.map(({ label, value }) => (
-            <div
+          {items.map(({ label, value, field }) => (
+            <button
               key={label}
-              className={`flex items-center gap-3 px-3 py-2 rounded-lg border ${
-                value ? 'bg-success/5 border-success/20' : 'bg-destructive/5 border-destructive/20'
-              }`}
+              type="button"
+              onClick={() => handleToggleFlag(field, value)}
+              disabled={updatePraticaMut.isPending}
+              className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg border cursor-pointer transition-colors ${
+                value
+                  ? 'bg-success/5 border-success/20 hover:bg-success/10'
+                  : 'bg-destructive/5 border-destructive/20 hover:bg-destructive/10'
+              } disabled:opacity-50 disabled:cursor-not-allowed`}
             >
-              <div className={`w-5 h-5 rounded flex items-center justify-center shrink-0 ${
+              <div className={`w-5 h-5 rounded flex items-center justify-center shrink-0 transition-colors ${
                 value ? 'bg-success text-white' : 'bg-muted text-muted-foreground'
               }`}>
                 {value && <Check className="w-3 h-3" />}
@@ -360,7 +383,7 @@ export function PraticaDettaglio({ pratica }: PraticaDettaglioProps) {
               {!value && (
                 <span className="ml-auto text-xs text-destructive font-medium">Mancante</span>
               )}
-            </div>
+            </button>
           ))}
         </div>
       </div>

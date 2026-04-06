@@ -415,7 +415,12 @@ function AnnoGroup({
       {righe.map(p => (
         <tr
           key={p.id}
-          className="border-b border-border/50 last:border-0 hover:bg-muted/20 transition-colors group"
+          className="border-b border-border/50 last:border-0 hover:bg-muted/20 transition-colors group cursor-pointer"
+          onClick={(e) => {
+            const target = e.target as HTMLElement
+            if (target.closest('button, a, [role="menuitem"], [data-radix-collection-item]')) return
+            onVisualizza(p)
+          }}
         >
           {/* Pratica / Cliente */}
           <td className="px-3 py-3.5">

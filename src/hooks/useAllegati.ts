@@ -42,7 +42,8 @@ export function useAllegatiPratica(praticaId: string | undefined) {
     queryKey: allegatiKeys.pratica(praticaId ?? ''),
     queryFn: () => fetchAllegatiPratica(praticaId!),
     enabled: !!praticaId,
-    staleTime: 30_000,
+    staleTime: 15_000,          // 15s — allegati possono cambiare da altri utenti
+    refetchInterval: 30_000,    // polling ogni 30s per propagazione cross-client
   })
 }
 

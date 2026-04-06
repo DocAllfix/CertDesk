@@ -186,11 +186,28 @@ export function useMarkAsRead() {
 
   return useMutation({
     mutationFn: (id: string) => markNotificaAsRead(id),
-    onSuccess: () => {
-      if (userId) qc.invalidateQueries({ queryKey: notificheKeys.all(userId) })
+    // Optimistic update — aggiorna badge immediatamente senza attendere il server
+    onMutate: async (id: string) => {
+      if (!userId) return
+      const key = notificheKeys.all(userId)
+      await qc.cancelQueries({ queryKey: key })
+      const prev = qc.getQueryData<Notifica[]>(key)
+      if (prev) {
+        qc.setQueryData<Notifica[]>(key, prev.map(n =>
+          n.id === id ? { ...n, letta: true, letta_at: new Date().toISOString() } : n
+        ))
+      }
+      return { prev }
     },
-    onError: (err: Error) => {
+    onError: (err: Error, _id, context) => {
+      // Rollback on error
+      if (userId && context?.prev) {
+        qc.setQueryData(notificheKeys.all(userId), context.prev)
+      }
       toast.error('Errore', { description: err.message })
+    },
+    onSettled: () => {
+      if (userId) qc.invalidateQueries({ queryKey: notificheKeys.all(userId) })
     },
   })
 }
@@ -207,11 +224,28 @@ export function useMarkAllAsRead() {
       if (!userId) throw new Error('Utente non autenticato')
       return markAllNotificheAsRead(userId)
     },
-    onSuccess: () => {
-      if (userId) qc.invalidateQueries({ queryKey: notificheKeys.all(userId) })
+    // Optimistic update — segna tutte come lette immediatamente
+    onMutate: async () => {
+      if (!userId) return
+      const key = notificheKeys.all(userId)
+      await qc.cancelQueries({ queryKey: key })
+      const prev = qc.getQueryData<Notifica[]>(key)
+      if (prev) {
+        const now = new Date().toISOString()
+        qc.setQueryData<Notifica[]>(key, prev.map(n =>
+          n.letta ? n : { ...n, letta: true, letta_at: now }
+        ))
+      }
+      return { prev }
     },
-    onError: (err: Error) => {
+    onError: (err: Error, _vars, context) => {
+      if (userId && context?.prev) {
+        qc.setQueryData(notificheKeys.all(userId), context.prev)
+      }
       toast.error('Errore', { description: err.message })
+    },
+    onSettled: () => {
+      if (userId) qc.invalidateQueries({ queryKey: notificheKeys.all(userId) })
     },
   })
 }
