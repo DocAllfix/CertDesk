@@ -11,7 +11,7 @@ const ALL_NORME = [
   'ISO 9001', 'ISO 14001', 'ISO 45001', 'SA 8000', 'PAS 24000',
   'PDR 125/2022', 'ESG-EASI', 'ISO 37001', 'ISO 39001', 'ISO 50001',
   'ISO 27001', 'ISO 14064-1', 'ISO 30415', 'ISO 13009', 'ISO 20121',
-  'EN 1090', 'ISO 3834',
+  'EN 1090', 'ISO 3834', 'ISO 16636',
 ]
 
 interface NormeMultiSelectProps {

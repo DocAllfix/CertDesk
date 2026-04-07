@@ -89,7 +89,7 @@ function NotificaItem({ n, onClickNotifica }: NotificaItemProps) {
       {/* Contenuto */}
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
-          <p className={`text-sm font-semibold truncate ${
+          <p className={`text-sm font-semibold ${
             isUnread ? 'text-foreground' : 'text-muted-foreground'
           }`}>
             {n.titolo}
@@ -156,7 +156,7 @@ export const NotifichePanel = memo(function NotifichePanel({ open, onClose }: No
       />
 
       {/* Panel — right-0, w-[400px], h-screen */}
-      <div className="fixed right-0 top-0 h-screen w-[400px] bg-card border-l border-border shadow-2xl z-50 flex flex-col">
+      <div className="fixed right-0 top-0 h-screen w-[440px] max-w-[calc(100vw-1rem)] bg-card border-l border-border shadow-2xl z-50 flex flex-col">
 
         {/* Header */}
         <div className="px-5 pt-5 pb-0 shrink-0">

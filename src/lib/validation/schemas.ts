@@ -75,7 +75,7 @@ export const praticaSchema = z.object({
   referente_tel:   optStr.nullable(),
 
   assegnato_a:   z.string().nullable().optional(),
-  data_scadenza: z.string().nullable().optional(),
+  data_scadenza: z.string().min(1, 'La data di scadenza è obbligatoria'),
   note:          z.string().trim().max(2000, 'Massimo 2000 caratteri').nullable().optional(),
   priorita:      z.number().int().min(0).max(2),
 
@@ -90,6 +90,8 @@ export const praticaSchema = z.object({
   data_emissione_certificato: z.string().nullable().optional(),
   data_scadenza_certificato:  z.string().nullable().optional(),
 
+  // ── Campi contesto form ─────────────────────────────────────────
+  _isEdit:               z.boolean().optional(),
   // ── Campi modalità importazione ────────────────────────────────
   import_mode:           z.boolean().optional(),
   import_fase:           faseEnum.optional(),
@@ -97,6 +99,19 @@ export const praticaSchema = z.object({
   import_numero_pratica: z.string().trim().max(50, 'Massimo 50 caratteri').optional(),
   import_completata_at:  z.string().optional(),
 }).superRefine((d, ctx) => {
+  // ── Validazione data_scadenza ─────────────────────────────────
+  // In creazione normale (non import, non modifica): scadenza non può essere nel passato
+  if (!d._isEdit && !d.import_mode && d.data_scadenza) {
+    const oggi = new Date().toISOString().split('T')[0]
+    if (d.data_scadenza < oggi) {
+      ctx.addIssue({
+        code: 'custom',
+        message: 'La data di scadenza non può essere nel passato',
+        path: ['data_scadenza'],
+      })
+    }
+  }
+
   // ── Validazione standard ─────────────────────────────────────
   if (d.tipo_contatto === 'consulente' && !d.consulente_id) {
     ctx.addIssue({

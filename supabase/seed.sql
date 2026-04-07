@@ -25,7 +25,8 @@ INSERT INTO norme_catalogo (codice, nome, ordine) VALUES
   ('ISO 13009',     'Operatori di spiaggia',                                  14),
   ('ISO 20121',     'Sostenibilità eventi',                                   15),
   ('EN 1090',       'Strutture in acciaio e alluminio',                       16),
-  ('ISO 3834',      'Qualità nella saldatura',                                17)
+  ('ISO 3834',      'Qualità nella saldatura',                                17),
+  ('ISO 16636',     'Servizi di gestione dei parassiti (Pest Management)',     18)
 ON CONFLICT (codice) DO NOTHING;
 
 -- -----------------------------------------------------------------------------

@@ -33,7 +33,7 @@ import { useClienti }     from '@/hooks/useClienti'
 import { useConsulenti }  from '@/hooks/useConsulenti'
 import { useTeamMembers } from '@/hooks/useTeamMembers'
 import { useCreatePratica, useUpdatePratica } from '@/hooks/usePratiche'
-import { getResponsabilePerNorma } from '@/lib/queries/userProfiles'
+import { getResponsabilePerNorma, getOperatoriPerNorme, getUtentiConNorme } from '@/lib/queries/userProfiles'
 import { setPraticaNorme, checkNumeroPraticaExists } from '@/lib/queries/pratiche'
 import { praticaSchema, type PraticaFormValues, sanitizeTextOrNull } from '@/lib/validation'
 
@@ -127,6 +127,7 @@ export function PraticaForm({ pratica, onSuccess, onCancel }: PraticaFormProps) 
   // ── Valori iniziali ─────────────────────────────────────────────
 
   const defaultValues: PraticaFormValues = {
+    _isEdit:      isEdit,
     cliente_id:   pratica?.cliente_id ?? '',
     norme:        pratica?.norme?.map(n => n.codice) ?? [],
     ciclo:        pratica?.ciclo ?? 'certificazione',
@@ -138,7 +139,7 @@ export function PraticaForm({ pratica, onSuccess, onCancel }: PraticaFormProps) 
     referente_tel:   pratica?.referente_tel   ?? null,
 
     assegnato_a:  pratica?.assegnato_a  ?? null,
-    data_scadenza: pratica?.data_scadenza ?? null,
+    data_scadenza: pratica?.data_scadenza ?? '',
     note:          pratica?.note          ?? null,
     priorita:      pratica?.priorita      ?? 0,
 
@@ -221,6 +222,68 @@ export function PraticaForm({ pratica, onSuccess, onCancel }: PraticaFormProps) 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [normeSelezionate?.[0]])
 
+  // ── Filtro utenti per norme nel dropdown "Assegnato a" ──────────
+  //
+  // Due livelli di filtro:
+  //   1. Responsabili: visibili se hanno almeno 1 norma in responsabili_norme
+  //      (esclude segretaria/responsabili senza competenze operative)
+  //   2. Operatori: visibili solo se competenti sulle norme selezionate nel form
+  //   Admin: sempre escluso dal dropdown.
+
+  // Caricato una volta — utenti che hanno almeno 1 riga in responsabili_norme
+  const [utentiConNormeIds, setUtentiConNormeIds] = useState<string[]>([])
+
+  useEffect(() => {
+    let cancelled = false
+    getUtentiConNorme().then((ids) => {
+      if (!cancelled) setUtentiConNormeIds(ids)
+    })
+    return () => { cancelled = true }
+  }, [])
+
+  // Reagisce alle norme selezionate — utenti competenti sulle norme scelte
+  const [operatoriIdsPerNorme, setOperatoriIdsPerNorme] = useState<string[]>([])
+
+  useEffect(() => {
+    const norme = normeSelezionate ?? []
+    if (norme.length === 0) {
+      setOperatoriIdsPerNorme([])
+      return
+    }
+
+    let cancelled = false
+    getOperatoriPerNorme(norme).then((ids) => {
+      if (cancelled) return
+      setOperatoriIdsPerNorme(ids)
+    })
+    return () => { cancelled = true }
+  }, [normeSelezionate])
+
+  // Costruisce la lista filtrata per il dropdown
+  const normeScelte = (normeSelezionate ?? []).length > 0
+  const teamFiltrato = normeScelte
+    ? team.filter((u) => {
+        if (u.ruolo === 'admin') return false
+        // In modifica, l'utente già assegnato resta sempre visibile
+        if (isEdit && u.id === pratica?.assegnato_a) return true
+        // Responsabili: visibili solo se hanno almeno 1 norma assegnata
+        if (u.ruolo === 'responsabile') return utentiConNormeIds.includes(u.id)
+        // Operatori: visibili solo se competenti sulle norme selezionate
+        return operatoriIdsPerNorme.includes(u.id)
+      })
+    : []
+
+  // Se l'utente selezionato non è più compatibile dopo cambio norme → reset
+  const assegnatoCorrente = watch('assegnato_a')
+  useEffect(() => {
+    if (!normeScelte || !assegnatoCorrente) return
+    const ancoraValido = teamFiltrato.some((u) => u.id === assegnatoCorrente)
+    if (!ancoraValido) {
+      setValue('assegnato_a', null, { shouldDirty: true })
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [operatoriIdsPerNorme])
+
   // ── Auto-set flag coerenza in modalità import ───────────────────
   // Quando cambia la fase di import, auto-setta i flag prerequisito
   // delle fasi precedenti per garantire coerenza con il workflow.
@@ -243,6 +306,7 @@ export function PraticaForm({ pratica, onSuccess, onCancel }: PraticaFormProps) 
   const onSubmit = async (values: PraticaFormValues) => {
     const {
       norme,
+      _isEdit: _,
       import_mode, import_fase, import_created_at,
       import_numero_pratica, import_completata_at,
       ...rest
@@ -615,25 +679,37 @@ export function PraticaForm({ pratica, onSuccess, onCancel }: PraticaFormProps) 
                 control={control}
                 name="assegnato_a"
                 render={({ field }) => (
-                  <Select value={field.value ?? ''} onValueChange={(v) => field.onChange(v === '__none__' ? null : v || null)} disabled={gestionaleDisabled}>
-                    <SelectTrigger className={gestionaleDisabled ? 'opacity-60' : 'cursor-pointer'}>
-                      <SelectValue placeholder="Seleziona utente..." />
+                  <Select
+                    value={field.value ?? ''}
+                    onValueChange={(v) => field.onChange(v === '__none__' ? null : v || null)}
+                    disabled={gestionaleDisabled || !normeScelte}
+                  >
+                    <SelectTrigger className={gestionaleDisabled || !normeScelte ? 'opacity-60' : 'cursor-pointer'}>
+                      <SelectValue placeholder={normeScelte ? 'Seleziona utente...' : 'Seleziona prima le norme'} />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="__none__">— Nessuno —</SelectItem>
-                      {team.map((u) => (
+                      {teamFiltrato.map((u) => (
                         <SelectItem key={u.id} value={u.id}>
-                          {u.nome} {u.cognome}
+                          {u.nome} {u.cognome} {u.ruolo === 'responsabile' ? '(Resp.)' : ''}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 )}
               />
+              {!normeScelte && !gestionaleDisabled && (
+                <p className="text-xs text-muted-foreground mt-1">Seleziona almeno una norma per scegliere l'operatore</p>
+              )}
             </div>
             <div>
-              <Label className="text-sm font-medium mb-1.5 block">Scadenza</Label>
+              <Label className="text-sm font-medium mb-1.5 block">
+                Scadenza <span className="text-destructive">*</span>
+              </Label>
               <Input type="date" disabled={gestionaleDisabled} className={gestionaleDisabled ? 'opacity-60' : ''} {...register('data_scadenza')} />
+              {errors.data_scadenza && (
+                <p className="text-xs text-destructive mt-1">{errors.data_scadenza.message}</p>
+              )}
             </div>
           </div>
 
