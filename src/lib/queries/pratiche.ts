@@ -284,6 +284,18 @@ export async function createPratica({ norme, ...praticaData }: CreatePraticaData
     if (promError) {
       console.warn('Promemoria sorveglianza non creato:', promError.message)
     }
+
+    // Popola data_prossima_sorveglianza sulla pratica importata.
+    // Il trigger on_pratica_completata NON scatta su INSERT (è BEFORE UPDATE),
+    // quindi la colonna va impostata esplicitamente. Stessa formula del trigger.
+    const { error: dpsError } = await supabase
+      .from('pratiche')
+      .update({ data_prossima_sorveglianza: dataScadenzaProm })
+      .eq('id', created.id)
+
+    if (dpsError) {
+      console.warn('data_prossima_sorveglianza non impostata:', dpsError.message)
+    }
   }
 
   return created

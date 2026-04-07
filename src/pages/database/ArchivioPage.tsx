@@ -345,6 +345,9 @@ export default function ArchivioPage() {
                   <th className="text-left text-xs font-medium text-muted-foreground px-3 py-2.5">
                     Scadenza Cert.
                   </th>
+                  <th className="text-left text-xs font-medium text-muted-foreground px-3 py-2.5">
+                    Prossima Sorv.
+                  </th>
                   <th className="w-12 px-3 py-2.5" />
                 </tr>
               </thead>
@@ -403,7 +406,7 @@ function AnnoGroup({
     <>
       {/* Header gruppo anno */}
       <tr className="bg-muted/40 border-b border-border">
-        <td colSpan={7} className="px-3 py-2">
+        <td colSpan={8} className="px-3 py-2">
           <span className="text-xs font-semibold text-foreground">{anno}</span>
           <span className="ml-2 text-xs text-muted-foreground">
             — {totalGruppo} {totalGruppo === 1 ? 'pratica' : 'pratiche'}
@@ -477,9 +480,14 @@ function AnnoGroup({
             }
           </td>
 
-          {/* Scadenza certificato */}
+          {/* Scadenza certificato (data emissione + 3 anni, manuale) */}
           <td className="px-3 py-3.5">
             <BadgeUrgenza dataScadenza={p.data_scadenza_certificato} />
+          </td>
+
+          {/* Prossima sorveglianza (calcolata da on_pratica_completata) */}
+          <td className="px-3 py-3.5">
+            <BadgeUrgenza dataScadenza={p.data_prossima_sorveglianza} />
           </td>
 
           {/* Azioni */}

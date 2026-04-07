@@ -382,6 +382,7 @@ export type Database = {
           created_at: string | null
           created_by: string | null
           data_emissione_certificato: string | null
+          data_prossima_sorveglianza: string | null
           data_scadenza: string | null
           data_scadenza_certificato: string | null
           data_verifica: string | null
@@ -422,6 +423,7 @@ export type Database = {
           created_at?: string | null
           created_by?: string | null
           data_emissione_certificato?: string | null
+          data_prossima_sorveglianza?: string | null
           data_scadenza?: string | null
           data_scadenza_certificato?: string | null
           data_verifica?: string | null
@@ -462,6 +464,7 @@ export type Database = {
           created_at?: string | null
           created_by?: string | null
           data_emissione_certificato?: string | null
+          data_prossima_sorveglianza?: string | null
           data_scadenza?: string | null
           data_scadenza_certificato?: string | null
           data_verifica?: string | null
@@ -767,6 +770,7 @@ export type Database = {
           created_at: string | null
           created_by: string | null
           data_emissione_certificato: string | null
+          data_prossima_sorveglianza: string | null
           data_scadenza: string | null
           data_scadenza_certificato: string | null
           data_verifica: string | null

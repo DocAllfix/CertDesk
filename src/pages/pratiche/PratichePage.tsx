@@ -12,7 +12,7 @@ import { useState } from 'react'
 import { useSearchParams, useNavigate } from 'react-router-dom'
 import { format, addDays } from 'date-fns'
 import {
-  Plus, Search, Filter, ArrowUpDown, Loader2, Import,
+  Plus, Search, Filter, ArrowUpDown, ArrowUp, ArrowDown, Loader2, Import,
 } from 'lucide-react'
 
 import { Button }   from '@/components/ui/button'
@@ -76,6 +76,87 @@ type PraticaListRaw = Tables<'pratiche'> & {
   consulente:     Pick<Consulente, 'id' | 'nome' | 'cognome'> | null
   assegnato:      Pick<UserProfile, 'id' | 'nome' | 'cognome' | 'avatar_url'> | null
   pratiche_norme: { norma_codice: string }[]
+}
+
+// ── Sort client-side ─────────────────────────────────────────────
+
+type SortKey = 'cliente' | 'fase' | 'scadenza' | 'norme' | 'ciclo' | 'assegnato'
+type SortDir = 'asc' | 'desc'
+
+const SORT_KEYS: SortKey[] = ['cliente', 'fase', 'scadenza', 'norme', 'ciclo', 'assegnato']
+
+function isSortKey(s: string | null): s is SortKey {
+  return s !== null && (SORT_KEYS as string[]).includes(s)
+}
+
+/** Estrae il valore comparabile per una colonna. Stringhe lowercased; date come stringhe ISO. */
+function getSortValue(p: PraticaListRaw, key: SortKey): string | number | null {
+  switch (key) {
+    case 'cliente':
+      return (p.cliente?.nome ?? p.cliente?.ragione_sociale ?? '').toLowerCase() || null
+    case 'fase':
+      return p.fase
+    case 'scadenza':
+      // Coerente con PraticaRow: per pratiche completate la scadenza
+      // visualizzata è la prossima sorveglianza, non data_scadenza.
+      return p.fase === 'completata'
+        ? p.data_prossima_sorveglianza
+        : p.data_scadenza
+    case 'norme':
+      return p.pratiche_norme.length
+    case 'ciclo':
+      return p.ciclo
+    case 'assegnato':
+      return ((p.assegnato?.cognome ?? '') + (p.assegnato?.nome ?? '')).toLowerCase() || null
+  }
+}
+
+/** Sort stabile con null sempre in fondo (indipendentemente dalla direzione). */
+function sortPratiche(rows: PraticaListRaw[], by: SortKey | null, dir: SortDir): PraticaListRaw[] {
+  if (!by) return rows
+  const mult = dir === 'asc' ? 1 : -1
+  // .sort è in-place: cloniamo per non mutare l'array della query cache
+  return [...rows].sort((a, b) => {
+    const va = getSortValue(a, by)
+    const vb = getSortValue(b, by)
+    if (va === vb) return 0
+    if (va == null) return 1   // null sempre in fondo
+    if (vb == null) return -1
+    if (va < vb) return -1 * mult
+    if (va > vb) return  1 * mult
+    return 0
+  })
+}
+
+// ── SortableHeader ───────────────────────────────────────────────
+
+interface SortableHeaderProps {
+  col:      SortKey
+  label:    string
+  sortBy:   SortKey | null
+  sortDir:  SortDir
+  onSort:   (col: SortKey) => void
+  className?: string
+}
+
+function SortableHeader({ col, label, sortBy, sortDir, onSort, className = '' }: SortableHeaderProps) {
+  const active = sortBy === col
+  const Icon   = !active ? ArrowUpDown : sortDir === 'asc' ? ArrowUp : ArrowDown
+  return (
+    <th className={`text-left text-xs font-medium text-muted-foreground px-3 py-2.5 ${className}`}>
+      <button
+        type="button"
+        onClick={() => onSort(col)}
+        className={`flex items-center gap-1 hover:text-foreground transition-colors ${
+          active ? 'text-foreground' : ''
+        }`}
+        aria-label={`Ordina per ${label}`}
+      >
+        {label}
+        <Icon className={`w-3 h-3 ${active ? 'opacity-100' : 'opacity-40'}`} />
+      </button>
+    </th>
+  )
 }
 
 function toListItem(raw: PraticaListRaw): PraticaListItem {
@@ -177,6 +258,11 @@ export default function PratichePage() {
   const scadenze  = searchParams.get('scadenze')  // 'critiche' → scadenza ≤ +15gg
   const pagina    = Math.max(1, parseInt(searchParams.get('pagina') ?? '1', 10))
 
+  // Sort: sortBy/sortDir validati. Se sortBy non è valido → null (sort default server)
+  const sortByRaw = searchParams.get('sortBy')
+  const sortBy: SortKey | null = isSortKey(sortByRaw) ? sortByRaw : null
+  const sortDir: SortDir = searchParams.get('sortDir') === 'desc' ? 'desc' : 'asc'
+
   // scadenze=critiche → filtra pratiche con data_scadenza entro 15 giorni
   const scadenzaMax = scadenze === 'critiche'
     ? format(addDays(new Date(), 15), 'yyyy-MM-dd')
@@ -238,12 +324,35 @@ export default function PratichePage() {
     ? praticheRaw.filter(p => p.fase !== 'completata')
     : praticheRaw.filter(p => p.fase === 'completata')
 
+  // ── Sort client-side (dopo filtro tab, prima della paginazione) ─
+  const praticheOrdinate = sortPratiche(praticheFiltrate, sortBy, sortDir)
+
   // ── Paginazione client-side ───────────────────────────────────
-  const totale      = praticheFiltrate.length
+  const totale      = praticheOrdinate.length
   const totalePagine = Math.max(1, Math.ceil(totale / PER_PAGINA))
-  const praticheVisibili  = praticheFiltrate
+  const praticheVisibili  = praticheOrdinate
     .slice((pagina - 1) * PER_PAGINA, pagina * PER_PAGINA)
     .map(toListItem)
+
+  // ── Handler sort: toggle asc → desc → off ────────────────────
+  const handleSort = (col: SortKey) => {
+    setSearchParams(prev => {
+      const next = new URLSearchParams(prev)
+      const currentBy  = next.get('sortBy')
+      const currentDir = next.get('sortDir')
+      if (currentBy !== col) {
+        next.set('sortBy', col)
+        next.set('sortDir', 'asc')
+      } else if (currentDir === 'asc') {
+        next.set('sortDir', 'desc')
+      } else {
+        next.delete('sortBy')
+        next.delete('sortDir')
+      }
+      next.delete('pagina') // reset pagina su cambio sort
+      return next
+    }, { replace: true })
+  }
 
   // ── Conteggio per tab ─────────────────────────────────────────
   const countAttive     = praticheRaw.filter(p => p.fase !== 'completata').length
@@ -465,27 +574,53 @@ export default function PratichePage() {
                       aria-label="Seleziona tutto"
                     />
                   </th>
-                  <th className="text-left text-xs font-medium text-muted-foreground px-3 py-2.5 min-w-[200px]">
-                    Pratica / Cliente
-                  </th>
-                  <th className="text-left text-xs font-medium text-muted-foreground px-3 py-2.5">
-                    Assegnato
-                  </th>
-                  <th className="text-left text-xs font-medium text-muted-foreground px-3 py-2.5 min-w-[130px]">
-                    Fase
-                  </th>
+                  <SortableHeader
+                    col="cliente"
+                    label="Pratica / Cliente"
+                    sortBy={sortBy}
+                    sortDir={sortDir}
+                    onSort={handleSort}
+                    className="min-w-[200px]"
+                  />
+                  <SortableHeader
+                    col="assegnato"
+                    label="Assegnato"
+                    sortBy={sortBy}
+                    sortDir={sortDir}
+                    onSort={handleSort}
+                  />
+                  <SortableHeader
+                    col="fase"
+                    label="Fase"
+                    sortBy={sortBy}
+                    sortDir={sortDir}
+                    onSort={handleSort}
+                    className="min-w-[130px]"
+                  />
                   <th className="text-left text-xs font-medium text-muted-foreground px-3 py-2.5">
                     Stato
                   </th>
-                  <th className="text-left text-xs font-medium text-muted-foreground px-3 py-2.5">
-                    Scadenza
-                  </th>
-                  <th className="text-left text-xs font-medium text-muted-foreground px-3 py-2.5">
-                    Norme
-                  </th>
-                  <th className="text-left text-xs font-medium text-muted-foreground px-3 py-2.5">
-                    Ciclo
-                  </th>
+                  <SortableHeader
+                    col="scadenza"
+                    label="Scadenza"
+                    sortBy={sortBy}
+                    sortDir={sortDir}
+                    onSort={handleSort}
+                  />
+                  <SortableHeader
+                    col="norme"
+                    label="Norme"
+                    sortBy={sortBy}
+                    sortDir={sortDir}
+                    onSort={handleSort}
+                  />
+                  <SortableHeader
+                    col="ciclo"
+                    label="Ciclo"
+                    sortBy={sortBy}
+                    sortDir={sortDir}
+                    onSort={handleSort}
+                  />
                   <th className="text-left text-xs font-medium text-muted-foreground px-3 py-2.5">
                     Contatto
                   </th>

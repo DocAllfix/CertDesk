@@ -246,10 +246,14 @@ Deno.serve(async (_req: Request): Promise<Response> => {
 
         if (createErr) throw createErr
 
-        // 2. Segna il reminder come creato (guard anti-duplicato)
+        // 2. Segna il reminder come creato (guard anti-duplicato) e popola
+        //    data_prossima_sorveglianza con la stessa formula del trigger.
         const { error: updateErr } = await supabase
           .from('pratiche')
-          .update({ sorveglianza_reminder_creato: true })
+          .update({
+            sorveglianza_reminder_creato: true,
+            data_prossima_sorveglianza:   dataScadenza.toISOString().split('T')[0],
+          })
           .eq('id', pratica.id)
 
         if (updateErr) throw updateErr

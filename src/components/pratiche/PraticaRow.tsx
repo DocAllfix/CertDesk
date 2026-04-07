@@ -107,7 +107,15 @@ export const PraticaRow = memo(function PraticaRow({
   onElimina,
   onPrefetch,
 }: PraticaRowProps) {
-  const urgente = isUrgente(pratica.data_scadenza)
+  // Per le pratiche completate la "scadenza" mostrata è la prossima
+  // sorveglianza calcolata dal trigger on_pratica_completata (+365gg, o
+  // +1095gg per SA 8000). Per le pratiche in corso resta la scadenza
+  // pianificata della pratica corrente.
+  const isCompletata = pratica.fase === 'completata'
+  const scadenzaEffettiva = isCompletata
+    ? pratica.data_prossima_sorveglianza
+    : pratica.data_scadenza
+  const urgente = isUrgente(scadenzaEffettiva)
   const navigate = useNavigate()
 
   const handleRowClick = (e: React.MouseEvent<HTMLTableRowElement>) => {
@@ -167,9 +175,19 @@ export const PraticaRow = memo(function PraticaRow({
           : <span className="text-xs text-muted-foreground/40">—</span>}
       </td>
 
-      {/* Scadenza */}
+      {/* Scadenza — per pratiche completate mostra la prossima sorveglianza */}
       <td className="px-3 py-2.5">
-        <BadgeUrgenza dataScadenza={pratica.data_scadenza} />
+        <div className="flex items-center gap-1.5">
+          <BadgeUrgenza dataScadenza={scadenzaEffettiva} />
+          {isCompletata && scadenzaEffettiva && (
+            <span
+              className="text-[10px] text-muted-foreground"
+              title="Prossima sorveglianza calcolata dal completamento (+12 / +36 mesi)"
+            >
+              sorv.
+            </span>
+          )}
+        </div>
       </td>
 
       {/* Norme */}
