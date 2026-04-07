@@ -29,6 +29,7 @@ import { usePratiche }                          from '@/hooks/usePratiche'
 import { useAuth }                              from '@/hooks/useAuth'
 import { BadgeFase }                            from '@/components/shared/BadgeFase'
 import { BadgeUrgenza }                         from '@/components/shared/BadgeUrgenza'
+import { NormePieChart }                        from '@/components/dashboard/NormePieChart'
 
 import type { Tables }                          from '@/lib/supabase'
 import type { Cliente, Consulente, UserProfile, FaseType, StoricoFaseConUtente } from '@/types/app.types'
@@ -336,8 +337,8 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* Distribuzione Fasi — barre + mini kanban, da evalisdesk PhaseDistribution.jsx */}
-        <div className="lg:col-span-2">
+        {/* Distribuzione Fasi + NormePieChart — da evalisdesk */}
+        <div className="lg:col-span-2 flex flex-col gap-6">
           <div className="bg-card rounded-xl border border-border overflow-hidden">
             <div className="px-5 py-4 border-b border-border">
               <h3 className="font-semibold text-foreground">Distribuzione Fasi</h3>
@@ -362,6 +363,7 @@ export default function DashboardPage() {
               })}
             </div>
           </div>
+          <NormePieChart />
         </div>
       </div>
 

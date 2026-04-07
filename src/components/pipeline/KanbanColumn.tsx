@@ -33,12 +33,11 @@ export const PIPELINE_FASI: FaseColumnConfig[] = [
 interface KanbanColumnProps {
   config: FaseColumnConfig
   pratiche: PraticaListItem[]
-  onAvanza?: (pratica: PraticaListItem) => void
 }
 
 // ── Componente ────────────────────────────────────────────────────
 
-export function KanbanColumn({ config, pratiche, onAvanza }: KanbanColumnProps) {
+export function KanbanColumn({ config, pratiche }: KanbanColumnProps) {
   return (
     <div className="min-w-[260px] w-[260px] shrink-0 flex flex-col">
 
@@ -59,7 +58,6 @@ export function KanbanColumn({ config, pratiche, onAvanza }: KanbanColumnProps) 
             key={p.id}
             pratica={p}
             phaseColor={config.bgColor}
-            onAvanza={onAvanza}
           />
         ))}
         {pratiche.length === 0 && (

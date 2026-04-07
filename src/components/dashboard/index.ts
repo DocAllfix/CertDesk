@@ -1,2 +1,1 @@
-// Dashboard components: KPI cards, ScadenzeImmediate, AttivitaRecenti
-export {}
+export { NormePieChart } from './NormePieChart'

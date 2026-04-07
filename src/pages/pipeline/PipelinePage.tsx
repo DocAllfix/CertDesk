@@ -1,41 +1,29 @@
 /**
- * PipelinePage — Vista Kanban orizzontale con 5 colonne + Drag & Drop.
+ * PipelinePage — Vista Kanban con @hello-pangea/dnd.
  *
- * Convertito da: c:\Users\user\Desktop\evalisdesk-ref\src\pages\Pipeline.jsx
- *
- * Features:
- * - DnD con @dnd-kit: trascina card tra colonne per avanzare/retrocedere fase
- * - Ricerca client-side su nome cliente + numero pratica
- * - Filtri per norma e assegnato
- * - Solo pratiche con stato = 'attiva', escluse completate
- * - Scroll verticale nelle colonne
+ * DnD identico a evalisdesk-ref/src/pages/Pipeline.jsx:
+ * - DragDropContext + StrictModeDroppable + Draggable
+ * - Optimistic update locale (card si sposta subito, rollback se server fallisce)
+ * - Nessun bottone "Avanza" — il drag È l'azione
+ * - Toast sonner per errori
  */
-import { useState, useMemo } from 'react'
-import { Search, Filter, Loader2, GripVertical } from 'lucide-react'
+import { useState, useMemo, useEffect } from 'react'
+import { Search, Filter, Loader2 } from 'lucide-react'
 import { Input }  from '@/components/ui/input'
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select'
-
-import {
-  DndContext,
-  DragOverlay,
-  PointerSensor,
-  KeyboardSensor,
-  useSensor,
-  useSensors,
-  closestCenter,
-  type DragStartEvent,
-  type DragEndEvent,
-} from '@dnd-kit/core'
-import { useDroppable } from '@dnd-kit/core'
+import { DragDropContext, Draggable } from '@hello-pangea/dnd'
+import type { DropResult } from '@hello-pangea/dnd'
+import { StrictModeDroppable } from '@/components/pipeline/StrictModeDroppable'
+import { toast } from 'sonner'
 
 import { KanbanCard }      from '@/components/pipeline/KanbanCard'
 import { PIPELINE_FASI }   from '@/components/pipeline/KanbanColumn'
 import { usePratiche, useAvanzaFase } from '@/hooks/usePratiche'
 import { useTeamMembers }  from '@/hooks/useTeamMembers'
 import { useAuth }         from '@/hooks/useAuth'
-import { canAdvanceFase, getNextFase }  from '@/lib/workflow'
+import { canAdvanceFase }  from '@/lib/workflow'
 
 import type { PraticaListItem, FiltriPratiche, FaseType } from '@/types/app.types'
 import type { Tables } from '@/lib/supabase'
@@ -72,89 +60,6 @@ const NORME_LIST = [
   'EN 1090', 'ISO 3834',
 ]
 
-// ── Droppable Column ─────────────────────────────────────────────
-
-interface DroppableColumnProps {
-  config: typeof PIPELINE_FASI[0]
-  pratiche: PraticaListItem[]
-  onAvanza?: (pratica: PraticaListItem) => void
-}
-
-function DroppableColumn({ config, pratiche, onAvanza }: DroppableColumnProps) {
-  const { isOver, setNodeRef } = useDroppable({ id: config.fase })
-
-  return (
-    <div className="min-w-[260px] w-[260px] shrink-0 flex flex-col">
-      {/* Column Header — Evalisdesk: solid colored bar */}
-      <div className={`rounded-t-xl px-4 py-2.5 flex items-center gap-2 ${config.bgColor}`}>
-        <h3 className="text-sm font-semibold text-white flex-1 truncate">
-          {config.label}
-        </h3>
-        <span className="text-xs font-bold text-white/80 bg-black/20 px-2 py-0.5 rounded-full">
-          {pratiche.length}
-        </span>
-      </div>
-
-      {/* Column Body — scrollable, droppable */}
-      <div
-        ref={setNodeRef}
-        className={`flex-1 space-y-2.5 min-h-[200px] rounded-b-xl p-2.5 border border-t-0 border-border/50
-          overflow-y-auto
-          transition-colors duration-150
-          ${isOver
-            ? 'bg-primary/5 border-primary/30 ring-2 ring-primary/20'
-            : 'bg-muted/20 dark:bg-muted/10'
-          }`}
-        style={{ maxHeight: 'calc(100vh - 240px)' }}
-      >
-        {pratiche.map(p => (
-          <DraggableCard key={p.id} pratica={p} phaseColor={config.bgColor} onAvanza={onAvanza} />
-        ))}
-        {pratiche.length === 0 && (
-          <div className="flex items-center justify-center h-24 text-xs text-muted-foreground/60">
-            Nessuna pratica
-          </div>
-        )}
-      </div>
-    </div>
-  )
-}
-
-// ── Draggable Card ───────────────────────────────────────────────
-
-import { useDraggable } from '@dnd-kit/core'
-
-interface DraggableCardProps {
-  pratica: PraticaListItem
-  phaseColor: string
-  onAvanza?: (pratica: PraticaListItem) => void
-}
-
-function DraggableCard({ pratica, phaseColor, onAvanza }: DraggableCardProps) {
-  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
-    id: pratica.id,
-    data: { pratica },
-  })
-
-  return (
-    <div
-      ref={setNodeRef}
-      className={`relative ${isDragging ? 'opacity-30 scale-[0.98]' : ''}`}
-    >
-      {/* Drag handle */}
-      <div
-        {...listeners}
-        {...attributes}
-        className="absolute top-3 right-2 z-10 cursor-grab active:cursor-grabbing p-0.5 rounded hover:bg-muted/60 transition-colors"
-        title="Trascina per spostare"
-      >
-        <GripVertical className="w-3.5 h-3.5 text-muted-foreground/40" />
-      </div>
-      <KanbanCard pratica={pratica} phaseColor={phaseColor} onAvanza={onAvanza} />
-    </div>
-  )
-}
-
 // ── Componente principale ────────────────────────────────────────
 
 export default function PipelinePage() {
@@ -170,7 +75,6 @@ export default function PipelinePage() {
   const [assigneeFilter, setAssigneeFilter] = useState('all')
   const [searchQuery,    setSearchQuery]    = useState('')
 
-  // Filtri query layer (solo server-side: norma, assegnato)
   const filtriQuery: FiltriPratiche = {
     solo_attive: true,
     ...(normFilter !== 'all'     ? { norma_codice: normFilter }     : {}),
@@ -179,7 +83,17 @@ export default function PipelinePage() {
 
   const { data: rawData = [], isLoading, error } = usePratiche(filtriQuery)
 
-  // Trasforma + filtro client-side (ricerca su nome cliente + numero_pratica)
+  // ── Optimistic update: override fase locale ────────────────────
+  // La card si sposta subito; quando il server risponde e la query
+  // si aggiorna, l'override viene pulito automaticamente.
+  const [faseOverrides, setFaseOverrides] = useState<Record<string, FaseType>>({})
+
+  // Pulisci override quando arrivano dati freschi dal server
+  useEffect(() => {
+    setFaseOverrides({})
+  }, [rawData])
+
+  // Trasforma + filtro client-side
   const praticheRaw = rawData as unknown as PraticaListRaw[]
   const pratiche: PraticaListItem[] = useMemo(() => {
     const all = praticheRaw
@@ -197,84 +111,72 @@ export default function PipelinePage() {
     })
   }, [praticheRaw, searchQuery])
 
-  // Raggruppa per fase — memoizzato per evitare ricalcoli ad ogni render
+  // Raggruppa per fase con override optimistic
   const praticheMap = useMemo(() => {
     const map: Record<string, PraticaListItem[]> = {}
     for (const config of PIPELINE_FASI) {
-      map[config.fase] = pratiche.filter(p => p.fase === config.fase)
+      map[config.fase] = []
+    }
+    for (const p of pratiche) {
+      const effectiveFase = faseOverrides[p.id] ?? p.fase
+      if (map[effectiveFase]) {
+        map[effectiveFase].push(p)
+      }
     }
     return map
-  }, [pratiche])
+  }, [pratiche, faseOverrides])
 
-  const pratichePerFase = (fase: string) => praticheMap[fase] ?? []
+  // ── DnD — @hello-pangea/dnd ────────────────────────────────────
 
-  // ── DnD ────────────────────────────────────────────────────────
+  function onDragEnd(result: DropResult) {
+    const { destination, source, draggableId } = result
+    if (!destination || !user) return
 
-  const [activeDragId, setActiveDragId] = useState<string | null>(null)
+    const targetFase = destination.droppableId as FaseType
+    if (targetFase === source.droppableId) return
 
-  const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
-    useSensor(KeyboardSensor),
-  )
-
-  const activePratica = activeDragId
-    ? pratiche.find(p => p.id === activeDragId) ?? null
-    : null
-
-  function handleDragStart(event: DragStartEvent) {
-    setActiveDragId(event.active.id as string)
-  }
-
-  function handleDragEnd(event: DragEndEvent) {
-    setActiveDragId(null)
-    const { active, over } = event
-    if (!over || !user) return
-
-    const praticaId = active.id as string
-    const targetFase = over.id as FaseType
-    const pratica = pratiche.find(p => p.id === praticaId)
-    if (!pratica || pratica.fase === targetFase) return
+    const pratica = pratiche.find(p => p.id === draggableId)
+    if (!pratica) return
 
     // Pre-validazione UX
     const validation = canAdvanceFase(pratica, targetFase)
     if (!validation.canAdvance) {
-      // Potremmo mostrare un toast qui in futuro
+      toast.error('Impossibile spostare', {
+        description: validation.missingPrereqs.join(', '),
+      })
       return
     }
 
-    // Avanza fase via orchestrator
-    avanzaFase.mutate({
-      id: praticaId,
-      oldFase: pratica.fase,
-      nuovaFase: targetFase,
-      userId: user.id,
-      allUsers: team.map(t => ({ id: t.id, ruolo: t.ruolo, nome: t.nome, cognome: t.cognome })),
-    })
-  }
+    // Optimistic: sposta la card immediatamente
+    setFaseOverrides(prev => ({ ...prev, [draggableId]: targetFase }))
 
-  // Handler avanza da bottone — avanzamento diretto con conferma
-  const handleAvanza = (p: PraticaListItem) => {
-    if (!user) return
-    const nextFase = getNextFase(p.fase)
-    if (!nextFase) return
-
-    const validation = canAdvanceFase(p, nextFase)
-    if (!validation.canAdvance) {
-      alert(`Non è possibile avanzare: ${validation.missingPrereqs.join(', ')}`)
-      return
-    }
-
-    const clienteNome = p.cliente?.nome ?? p.cliente?.ragione_sociale ?? ''
-    if (!window.confirm(`Avanzare "${clienteNome}" da ${p.fase} a ${nextFase}?`)) return
-
-    avanzaFase.mutate({
-      id: p.id,
-      oldFase: p.fase,
-      nuovaFase: nextFase,
-      userId: user.id,
-      allUsers: team.map(t => ({ id: t.id, ruolo: t.ruolo, nome: t.nome, cognome: t.cognome })),
-      clienteNome: clienteNome || undefined,
-    })
+    // Mutation server
+    avanzaFase.mutate(
+      {
+        id: draggableId,
+        oldFase: pratica.fase,
+        nuovaFase: targetFase,
+        userId: user.id,
+        allUsers: team.map(t => ({ id: t.id, ruolo: t.ruolo, nome: t.nome, cognome: t.cognome })),
+      },
+      {
+        onError: (err) => {
+          // Rollback: rimuovi l'override → la card torna alla fase originale
+          setFaseOverrides(prev => {
+            const next = { ...prev }
+            delete next[draggableId]
+            return next
+          })
+          toast.error('Errore avanzamento fase', {
+            description: (err as Error).message,
+          })
+        },
+        onSuccess: () => {
+          const clienteNome = pratica.cliente?.nome ?? pratica.cliente?.ragione_sociale ?? ''
+          toast.success(`${clienteNome} spostata a ${targetFase.replaceAll('_', ' ')}`)
+        },
+      },
+    )
   }
 
   // ── Render ─────────────────────────────────────────────────────
@@ -290,7 +192,7 @@ export default function PipelinePage() {
         </p>
       </div>
 
-      {/* Toolbar — Evalisdesk: flex wrap, gap-2 */}
+      {/* Toolbar */}
       <div className="flex flex-wrap items-center gap-2">
         <div className="relative">
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
@@ -348,37 +250,66 @@ export default function PipelinePage() {
         </div>
       )}
 
-      {/* Kanban Board con DnD */}
+      {/* Kanban Board */}
       {!isLoading && !error && (
-        <DndContext
-          sensors={sensors}
-          collisionDetection={closestCenter}
-          onDragStart={handleDragStart}
-          onDragEnd={handleDragEnd}
-        >
+        <DragDropContext onDragEnd={onDragEnd}>
           <div className="flex gap-3 overflow-x-auto pb-4 flex-1 min-h-0">
-            {PIPELINE_FASI.map(config => (
-              <DroppableColumn
-                key={config.fase}
-                config={config}
-                pratiche={pratichePerFase(config.fase)}
-                onAvanza={handleAvanza}
-              />
-            ))}
-          </div>
+            {PIPELINE_FASI.map(config => {
+              const cards = praticheMap[config.fase] ?? []
+              return (
+                <div key={config.fase} className="min-w-[260px] w-[260px] shrink-0 flex flex-col">
+                  {/* Column Header */}
+                  <div className={`rounded-t-xl px-4 py-2.5 flex items-center gap-2 ${config.bgColor}`}>
+                    <h3 className="text-sm font-semibold text-white flex-1 truncate">
+                      {config.label}
+                    </h3>
+                    <span className="text-xs font-bold text-white/80 bg-black/20 px-2 py-0.5 rounded-full">
+                      {cards.length}
+                    </span>
+                  </div>
 
-          {/* Drag overlay — phantom card that follows the cursor */}
-          <DragOverlay>
-            {activePratica && (
-              <div className="opacity-90 rotate-2 scale-105">
-                <KanbanCard
-                  pratica={activePratica}
-                  phaseColor="bg-primary"
-                />
-              </div>
-            )}
-          </DragOverlay>
-        </DndContext>
+                  {/* StrictModeDroppable Column Body */}
+                  <StrictModeDroppable droppableId={config.fase}>
+                    {(provided, snapshot) => (
+                      <div
+                        ref={provided.innerRef}
+                        {...provided.droppableProps}
+                        className={`flex-1 space-y-2.5 min-h-[200px] rounded-b-xl p-2.5 border border-t-0 border-border/50 transition-colors ${
+                          snapshot.isDraggingOver
+                            ? 'bg-primary/5 border-primary/30'
+                            : 'bg-muted/20 dark:bg-muted/10'
+                        }`}
+                        style={{ maxHeight: 'calc(100vh - 240px)' }}
+                      >
+                        {cards.map((p, index) => (
+                          <Draggable key={p.id} draggableId={p.id} index={index}>
+                            {(dragProvided, dragSnapshot) => (
+                              <div
+                                ref={dragProvided.innerRef}
+                                {...dragProvided.draggableProps}
+                                {...dragProvided.dragHandleProps}
+                                style={dragProvided.draggableProps.style}
+                                className={dragSnapshot.isDragging ? 'opacity-90 rotate-1 scale-105' : ''}
+                              >
+                                <KanbanCard pratica={p} phaseColor={config.bgColor} />
+                              </div>
+                            )}
+                          </Draggable>
+                        ))}
+                        {provided.placeholder}
+                        {cards.length === 0 && !snapshot.isDraggingOver && (
+                          <div className="flex items-center justify-center h-24 text-xs text-muted-foreground/60">
+                            Nessuna pratica
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </StrictModeDroppable>
+                </div>
+              )
+            })}
+          </div>
+        </DragDropContext>
       )}
     </div>
   )
