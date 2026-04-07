@@ -99,7 +99,7 @@ export default function ConsulentiPage() {
 
   return (
     <TooltipProvider>
-      <div className="space-y-5 max-w-[1400px]">
+      <div className="space-y-5">
 
         {/* Toolbar */}
         <div className="flex justify-end">

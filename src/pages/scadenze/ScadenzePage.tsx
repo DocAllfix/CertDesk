@@ -298,7 +298,7 @@ export default function ScadenzePage() {
   })
 
   return (
-    <div className="space-y-6 max-w-[1400px]">
+    <div className="space-y-6">
 
       {/* Header */}
       <div>

@@ -95,7 +95,7 @@ export default function PromemoriaPage() {
 
   if (items.length === 0) {
     return (
-      <div className="space-y-6 max-w-[1400px]">
+      <div className="space-y-6">
         {/* Page header */}
         <div>
           <h1 className="text-xl font-semibold text-foreground">Promemoria</h1>
@@ -120,7 +120,7 @@ export default function PromemoriaPage() {
   // ── Lista ────────────────────────────────────────────────────
 
   return (
-    <div className="space-y-6 max-w-[1400px]">
+    <div className="space-y-6">
       {/* Page header */}
       <div className="flex items-center justify-between">
         <div>

@@ -291,7 +291,7 @@ export default function PratichePage() {
   // ── Render ────────────────────────────────────────────────────
 
   return (
-    <div className="space-y-0 max-w-[1600px]">
+    <div className="space-y-0">
 
       {/* Header pagina */}
       <div className="flex items-center justify-between mb-5">

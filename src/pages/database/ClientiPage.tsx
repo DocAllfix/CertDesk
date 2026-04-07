@@ -39,7 +39,7 @@ export default function ClientiPage() {
   }
 
   return (
-    <div className="space-y-5 max-w-[1400px]">
+    <div className="space-y-5">
 
       {/* Toolbar */}
       <div className="flex items-center justify-between flex-wrap gap-3">

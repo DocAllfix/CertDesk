@@ -219,7 +219,7 @@ export default function DashboardPage() {
   const nomePrincipale = userProfile?.nome ?? 'utente'
 
   return (
-    <div className="space-y-6 max-w-[1400px]">
+    <div className="space-y-6">
 
       {/* ── Greeting — da evalisdesk Dashboard.jsx ──────────────── */}
       <div>
@@ -265,11 +265,13 @@ export default function DashboardPage() {
         />
       </div>
 
-      {/* ── Middle row: Scadenze (3) + Distribuzione Fasi (2) ───── */}
+      {/* ── Content: 2 colonne continue (3/5 + 2/5) ─────────────── */}
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
 
-        {/* Scadenze Urgenti — da evalisdesk DeadlinesTable.jsx */}
-        <div className="lg:col-span-3">
+        {/* ── Colonna sinistra (3/5): Scadenze + Attività ────────── */}
+        <div className="lg:col-span-3 flex flex-col gap-6">
+
+          {/* Scadenze Urgenti — da evalisdesk DeadlinesTable.jsx */}
           <div className="bg-card rounded-xl border border-border overflow-hidden">
             <div className="px-5 py-4 border-b border-border">
               <h3 className="font-semibold text-foreground">Scadenze Urgenti</h3>
@@ -335,10 +337,56 @@ export default function DashboardPage() {
               </table>
             </div>
           </div>
+
+          {/* Ultime Attività — da evalisdesk ActivityFeed.jsx */}
+          <div className="bg-card rounded-xl border border-border overflow-hidden">
+            <div className="px-5 py-4 border-b border-border">
+              <h3 className="font-semibold text-foreground">Attività Recente</h3>
+            </div>
+            <div className="p-5">
+              {loadingAtt ? (
+                <p className="text-sm text-muted-foreground text-center py-4">Caricamento…</p>
+              ) : attivita.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-4">Nessuna attività registrata</p>
+              ) : (
+                <div className="relative">
+                  <div className="absolute left-[11px] top-2 bottom-2 w-px bg-border" />
+                  <div className="space-y-5">
+                    {attivita.map((item) => (
+                      <div key={item.id} className="flex gap-4 relative">
+                        <div className="w-6 h-6 rounded-full bg-primary/10 border-2 border-card flex items-center justify-center shrink-0 z-10">
+                          <div className="w-2 h-2 rounded-full bg-primary" />
+                        </div>
+                        <div className="min-w-0 pt-0.5">
+                          <p className="text-sm text-foreground">
+                            <span className="font-medium">{nomeCompleto(item.cambiato_da_profile)}</span>{' '}
+                            <span className="text-muted-foreground">{buildEventText(item)}</span>
+                          </p>
+                          <div className="flex items-center gap-2 mt-1">
+                            <button
+                              type="button"
+                              onClick={() => navigate(`/pratiche/${item.pratica_id}`)}
+                              className="text-xs text-primary hover:underline font-medium"
+                            >
+                              Vai alla pratica
+                            </button>
+                            <span className="text-xs text-muted-foreground">·</span>
+                            <span className="text-xs text-muted-foreground">{fmtRelativo(item.created_at)}</span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
 
-        {/* Distribuzione Fasi + NormePieChart — da evalisdesk */}
+        {/* ── Colonna destra (2/5): Fasi + PieChart + Le mie pratiche ── */}
         <div className="lg:col-span-2 flex flex-col gap-6">
+
+          {/* Distribuzione Fasi */}
           <div className="bg-card rounded-xl border border-border overflow-hidden">
             <div className="px-5 py-4 border-b border-border">
               <h3 className="font-semibold text-foreground">Distribuzione Fasi</h3>
@@ -363,119 +411,72 @@ export default function DashboardPage() {
               })}
             </div>
           </div>
+
+          {/* NormePieChart */}
           <NormePieChart />
-        </div>
-      </div>
 
-      {/* ── Bottom row: Attività recente + Le mie pratiche ────────── */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Le mie pratiche */}
+          <div>
+            <div className="flex items-baseline gap-2 mb-3">
+              <h3 className="text-lg font-semibold text-foreground">Le mie pratiche</h3>
+              <span className="text-sm text-muted-foreground">({miePratiche.length} attive)</span>
+            </div>
 
-        {/* Ultime Attività — da evalisdesk ActivityFeed.jsx */}
-        <div className="bg-card rounded-xl border border-border overflow-hidden">
-          <div className="px-5 py-4 border-b border-border">
-            <h3 className="font-semibold text-foreground">Attività Recente</h3>
-          </div>
-          <div className="p-5">
-            {loadingAtt ? (
-              <p className="text-sm text-muted-foreground text-center py-4">Caricamento…</p>
-            ) : attivita.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-4">Nessuna attività registrata</p>
+            {miePratiche.length === 0 ? (
+              <div className="bg-card rounded-xl border border-border px-5 py-8 text-center">
+                <p className="text-sm text-muted-foreground">Nessuna pratica assegnata</p>
+              </div>
             ) : (
-              <div className="relative">
-                {/* Linea verticale timeline — da evalisdesk ActivityFeed */}
-                <div className="absolute left-[11px] top-2 bottom-2 w-px bg-border" />
-                <div className="space-y-5">
-                  {attivita.map((item) => (
-                    <div key={item.id} className="flex gap-4 relative">
-                      <div className="w-6 h-6 rounded-full bg-primary/10 border-2 border-card flex items-center justify-center shrink-0 z-10">
-                        <div className="w-2 h-2 rounded-full bg-primary" />
-                      </div>
-                      <div className="min-w-0 pt-0.5">
-                        <p className="text-sm text-foreground">
-                          <span className="font-medium">{nomeCompleto(item.cambiato_da_profile)}</span>{' '}
-                          <span className="text-muted-foreground">{buildEventText(item)}</span>
+              <div className="space-y-2">
+                {miePratiche.map((p) => (
+                  <div
+                    key={p.id}
+                    className="bg-card rounded-lg border border-border px-4 py-3 flex items-center justify-between gap-4 hover:shadow-sm transition-shadow cursor-pointer"
+                    onClick={(e) => {
+                      const target = e.target as HTMLElement
+                      if (target.closest('a, button')) return
+                      navigate(`/pratiche/${p.id}`)
+                    }}
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold text-foreground truncate">
+                          {p.cliente?.nome ?? p.cliente?.ragione_sociale ?? '—'}
                         </p>
-                        <div className="flex items-center gap-2 mt-1">
-                          <button
-                            type="button"
-                            onClick={() => navigate(`/pratiche/${item.pratica_id}`)}
-                            className="text-xs text-primary hover:underline font-medium"
-                          >
-                            Vai alla pratica
-                          </button>
-                          <span className="text-xs text-muted-foreground">·</span>
-                          <span className="text-xs text-muted-foreground">{fmtRelativo(item.created_at)}</span>
+                        <div className="flex items-center gap-1 mt-0.5 flex-wrap">
+                          {p.pratiche_norme.slice(0, 3).map((n) => (
+                            <span
+                              key={n.norma_codice}
+                              className="text-[11px] bg-muted px-1.5 py-0.5 rounded text-muted-foreground"
+                            >
+                              {n.norma_codice}
+                            </span>
+                          ))}
                         </div>
                       </div>
                     </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Le mie pratiche — da evalisdesk Dashboard.jsx sezione "Le mie pratiche" */}
-        <div>
-          <div className="flex items-baseline gap-2 mb-3">
-            <h3 className="text-lg font-semibold text-foreground">Le mie pratiche</h3>
-            <span className="text-sm text-muted-foreground">({miePratiche.length} attive)</span>
-          </div>
-
-          {miePratiche.length === 0 ? (
-            <div className="bg-card rounded-xl border border-border px-5 py-8 text-center">
-              <p className="text-sm text-muted-foreground">Nessuna pratica assegnata</p>
-            </div>
-          ) : (
-            <div className="space-y-2">
-              {miePratiche.map((p) => (
-                <div
-                  key={p.id}
-                  className="bg-card rounded-lg border border-border px-4 py-3 flex items-center justify-between gap-4 hover:shadow-sm transition-shadow cursor-pointer"
-                  onClick={(e) => {
-                    const target = e.target as HTMLElement
-                    if (target.closest('a, button')) return
-                    navigate(`/pratiche/${p.id}`)
-                  }}
-                >
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div className="min-w-0">
-                      <p className="text-sm font-semibold text-foreground truncate">
-                        {p.cliente?.nome ?? p.cliente?.ragione_sociale ?? '—'}
-                      </p>
-                      <div className="flex items-center gap-1 mt-0.5 flex-wrap">
-                        {p.pratiche_norme.slice(0, 3).map((n) => (
-                          <span
-                            key={n.norma_codice}
-                            className="text-[11px] bg-muted px-1.5 py-0.5 rounded text-muted-foreground"
-                          >
-                            {n.norma_codice}
-                          </span>
-                        ))}
-                      </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <BadgeFase fase={p.fase} short />
+                      <BadgeUrgenza dataScadenza={p.data_scadenza} />
+                      <Link
+                        to={`/pratiche/${p.id}`}
+                        className="text-xs text-primary hover:text-primary/80 font-medium"
+                      >
+                        Apri →
+                      </Link>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2 shrink-0">
-                    <BadgeFase fase={p.fase} short />
-                    <BadgeUrgenza dataScadenza={p.data_scadenza} />
-                    <Link
-                      to={`/pratiche/${p.id}`}
-                      className="text-xs text-primary hover:text-primary/80 font-medium"
-                    >
-                      Apri →
-                    </Link>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
+                ))}
+              </div>
+            )}
 
-          <Link
-            to="/pratiche"
-            className="text-sm text-primary hover:text-primary/80 font-medium mt-3 inline-block"
-          >
-            Vedi tutte le pratiche →
-          </Link>
+            <Link
+              to="/pratiche"
+              className="text-sm text-primary hover:text-primary/80 font-medium mt-3 inline-block"
+            >
+              Vedi tutte le pratiche →
+            </Link>
+          </div>
         </div>
 
       </div>
