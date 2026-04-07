@@ -12,10 +12,10 @@
  *
  * Design ref: ../evalisdesk-ref/src/components/dettaglio/PraticaModal.jsx
  */
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState } from 'react'
 import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { AlertTriangle, Sparkles, Import } from 'lucide-react'
+import { AlertTriangle, Sparkles } from 'lucide-react'
 
 import { Button }   from '@/components/ui/button'
 import { Input }    from '@/components/ui/input'
@@ -27,6 +27,7 @@ import {
 import { Checkbox } from '@/components/ui/checkbox'
 import { NormeMultiSelect } from '@/components/shared/NormeMultiSelect'
 import { QuickAddCliente }  from '@/components/clienti/QuickAddCliente'
+import { QuickAddConsulente } from '@/components/consulenti/QuickAddConsulente'
 
 import { useAuth }        from '@/hooks/useAuth'
 import { useClienti }     from '@/hooks/useClienti'
@@ -34,7 +35,7 @@ import { useConsulenti }  from '@/hooks/useConsulenti'
 import { useTeamMembers } from '@/hooks/useTeamMembers'
 import { useCreatePratica, useUpdatePratica } from '@/hooks/usePratiche'
 import { getResponsabilePerNorma, getOperatoriPerNorme, getUtentiConNorme } from '@/lib/queries/userProfiles'
-import { setPraticaNorme, checkNumeroPraticaExists } from '@/lib/queries/pratiche'
+import { setPraticaNorme } from '@/lib/queries/pratiche'
 import { praticaSchema, type PraticaFormValues, sanitizeTextOrNull } from '@/lib/validation'
 
 import type { PraticaConRelazioni, FaseType, CicloType } from '@/types/app.types'
@@ -58,20 +59,6 @@ const CICLO_LABELS: Record<CicloType, string> = {
 }
 
 // Schema Zod importato da @/lib/validation (praticaSchema)
-
-const FASE_LABELS: Record<FaseType, string> = {
-  contratto_firmato:       'Contratto Firmato',
-  programmazione_verifica: 'Programmazione Verifica',
-  richiesta_proforma:      'Richiesta Proforma',
-  elaborazione_pratica:    'Elaborazione Pratica',
-  firme:                   'Firme',
-  completata:              'Completata',
-}
-
-const FASI_ORDINATE: FaseType[] = [
-  'contratto_firmato', 'programmazione_verifica',
-  'richiesta_proforma', 'elaborazione_pratica', 'firme', 'completata',
-]
 
 // ── Helper ────────────────────────────────────────────────────────
 
@@ -109,8 +96,6 @@ export function PraticaForm({ pratica, onSuccess, onCancel }: PraticaFormProps) 
 
   const { userProfile } = useAuth()
   const isOperatore = userProfile?.ruolo === 'operatore'
-  // Toggle import visibile solo in creazione e solo per admin/responsabili
-  const canImport = !isEdit && !isOperatore
   // In modifica, l'operatore può modificare solo i campi operativi (note, audit, flag fase)
   const gestionaleDisabled = isEdit && isOperatore
 
@@ -170,39 +155,10 @@ export function PraticaForm({ pratica, onSuccess, onCancel }: PraticaFormProps) 
   const tipoContatto     = watch('tipo_contatto')
   const normeSelezionate = watch('norme')
   const documentiRicevuti = watch('documenti_ricevuti')
-  const importMode       = watch('import_mode')
-  const importFase       = watch('import_fase') as FaseType | undefined
 
-  const importNumeroPratica = watch('import_numero_pratica')
-
-  // ── Check duplicato numero_pratica (debounced) ──────────────────
-  const [numeroPraticaDuplicato, setNumeroPraticaDuplicato] = useState(false)
-  const [checkingNumero, setCheckingNumero] = useState(false)
-  const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined)
-
-  useEffect(() => {
-    // Reset se vuoto o non in import mode
-    if (!importMode || !importNumeroPratica?.trim()) {
-      setNumeroPraticaDuplicato(false)
-      setCheckingNumero(false)
-      return
-    }
-
-    setCheckingNumero(true)
-    clearTimeout(debounceRef.current)
-    debounceRef.current = setTimeout(async () => {
-      const exists = await checkNumeroPraticaExists(importNumeroPratica)
-      setNumeroPraticaDuplicato(exists)
-      setCheckingNumero(false)
-    }, 500)
-
-    return () => clearTimeout(debounceRef.current)
-  }, [importMode, importNumeroPratica])
-
-  // In modalità import, la fase è quella selezionata dall'utente.
   // In modifica, la fase è quella della pratica esistente.
   // In creazione normale, undefined (nessun campo fase-specifico visibile).
-  const fase: FaseType | undefined = importMode ? importFase : pratica?.fase
+  const fase: FaseType | undefined = pratica?.fase
 
   // ── Auto-fill assegnato_a ───────────────────────────────────────
   // Quando cambia la prima norma selezionata, cerca il responsabile
@@ -284,31 +240,12 @@ export function PraticaForm({ pratica, onSuccess, onCancel }: PraticaFormProps) 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [operatoriIdsPerNorme])
 
-  // ── Auto-set flag coerenza in modalità import ───────────────────
-  // Quando cambia la fase di import, auto-setta i flag prerequisito
-  // delle fasi precedenti per garantire coerenza con il workflow.
-
-  useEffect(() => {
-    if (!importMode || !importFase) return
-    const idx = FASI_ORDINATE.indexOf(importFase)
-
-    // Fase ≥ elaborazione_pratica (idx 3) → proforma_emessa + proforma_richiesta = true
-    if (idx >= 3) {
-      setValue('proforma_richiesta', true, { shouldDirty: false })
-    }
-
-    // Fase ≥ firme (idx 4) → documenti_ricevuti = true
-    // (proforma già coperta sopra)
-  }, [importMode, importFase, setValue])
-
   // ── Submit ──────────────────────────────────────────────────────
 
   const onSubmit = async (values: PraticaFormValues) => {
     const {
       norme,
       _isEdit: _,
-      import_mode, import_fase, import_created_at,
-      import_numero_pratica, import_completata_at,
       ...rest
     } = values
 
@@ -330,28 +267,8 @@ export function PraticaForm({ pratica, onSuccess, onCancel }: PraticaFormProps) 
       await updatePratica.mutateAsync({ id: pratica.id, data: finalPayload })
       await setPraticaNorme(pratica.id, norme)
     } else {
-      // ── Import mode: aggiungi campi extra al payload ──────────
-      const importPayload = import_mode && import_fase ? {
-        fase:            import_fase as FaseType,
-        numero_pratica:  import_numero_pratica || undefined, // undefined → trigger auto-genera
-        created_at:      import_created_at || undefined,     // undefined → DEFAULT NOW()
-        // Flag coerenza: auto-settati in base alla fase
-        proforma_richiesta: FASI_ORDINATE.indexOf(import_fase as FaseType) >= 3 ? true : finalPayload.proforma_richiesta,
-        proforma_emessa:    FASI_ORDINATE.indexOf(import_fase as FaseType) >= 3 ? true : undefined,
-        documenti_ricevuti: FASI_ORDINATE.indexOf(import_fase as FaseType) >= 4 ? true : finalPayload.documenti_ricevuti,
-        // Completamento
-        ...(import_fase === 'completata' ? {
-          completata:     true,
-          completata_at:  import_completata_at || new Date().toISOString(),
-          sorveglianza_reminder_creato: true, // impedisce trigger spurio su futuri update
-        } : {}),
-      } : {}
-
-      // createPratica gestisce internamente il promemoria sorveglianza
-      // per pratiche importate come completate (vedi lib/queries/pratiche.ts)
       await createPratica.mutateAsync({
         ...finalPayload,
-        ...importPayload,
         norme,
       })
     }
@@ -403,131 +320,6 @@ export function PraticaForm({ pratica, onSuccess, onCancel }: PraticaFormProps) 
             )}
           </div>
         </div>
-
-        {/* ── IMPORTAZIONE (solo creazione, solo admin/responsabile) ── */}
-        {canImport && (
-          <div>
-            <Controller
-              control={control}
-              name="import_mode"
-              render={({ field }) => (
-                <label className="flex items-center gap-2.5 cursor-pointer group">
-                  <Checkbox
-                    checked={field.value ?? false}
-                    onCheckedChange={(checked) => {
-                      field.onChange(checked === true)
-                      if (!checked) {
-                        // Reset campi import quando si disattiva
-                        setValue('import_fase', undefined)
-                        setValue('import_created_at', undefined)
-                        setValue('import_numero_pratica', undefined)
-                        setValue('import_completata_at', undefined)
-                      }
-                    }}
-                  />
-                  <Import className="w-3.5 h-3.5 text-secondary" />
-                  <span className="text-sm font-medium text-foreground group-hover:text-secondary transition-colors">
-                    Importa pratica esistente
-                  </span>
-                </label>
-              )}
-            />
-
-            {importMode && (
-              <div className="mt-4 space-y-3 p-4 rounded-lg border border-secondary/30 bg-secondary/5">
-                <p className="text-xs text-secondary font-semibold uppercase tracking-wider">
-                  Dati importazione
-                </p>
-
-                {/* Fase iniziale */}
-                <div>
-                  <Label className="text-sm font-medium mb-1.5 block">
-                    Fase attuale <span className="text-destructive">*</span>
-                  </Label>
-                  <Controller
-                    control={control}
-                    name="import_fase"
-                    render={({ field }) => (
-                      <Select value={field.value ?? ''} onValueChange={field.onChange}>
-                        <SelectTrigger className="cursor-pointer">
-                          <SelectValue placeholder="Seleziona la fase della pratica..." />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {FASI_ORDINATE.map((f) => (
-                            <SelectItem key={f} value={f}>
-                              {FASE_LABELS[f]}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    )}
-                  />
-                  {errors.import_fase && (
-                    <p className="text-xs text-destructive mt-1">{errors.import_fase.message}</p>
-                  )}
-                </div>
-
-                {/* Data inizio pratica */}
-                <div>
-                  <Label className="text-sm font-medium mb-1.5 block">Data inizio pratica</Label>
-                  <Input type="date" {...register('import_created_at')} />
-                  <p className="text-xs text-muted-foreground mt-1">
-                    La data originale in cui la pratica è stata avviata
-                  </p>
-                </div>
-
-                {/* Numero pratica originale */}
-                <div>
-                  <Label className="text-sm font-medium mb-1.5 block">Numero pratica originale</Label>
-                  <Input
-                    placeholder="Es. CERT-2024-0015 (vuoto = auto-generato)"
-                    {...register('import_numero_pratica')}
-                  />
-                  {checkingNumero && (
-                    <p className="text-xs text-muted-foreground mt-1">Verifica in corso...</p>
-                  )}
-                  {numeroPraticaDuplicato && !checkingNumero && (
-                    <p className="text-xs text-destructive mt-1 flex items-center gap-1">
-                      <AlertTriangle className="w-3 h-3" />
-                      Questo numero pratica esiste già nel sistema
-                    </p>
-                  )}
-                </div>
-
-                {/* Campi extra per fase completata */}
-                {importFase === 'completata' && (
-                  <div className="space-y-3 pt-2 border-t border-secondary/20">
-                    <div>
-                      <Label className="text-sm font-medium mb-1.5 block">
-                        Data completamento <span className="text-destructive">*</span>
-                      </Label>
-                      <Input type="date" {...register('import_completata_at')} />
-                      {errors.import_completata_at && (
-                        <p className="text-xs text-destructive mt-1">{errors.import_completata_at.message}</p>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {/* Riepilogo flag auto-settati */}
-                {importFase && FASI_ORDINATE.indexOf(importFase) >= 3 && (
-                  <div className="text-xs text-muted-foreground bg-muted/50 rounded-md px-3 py-2 space-y-1">
-                    <p className="font-medium text-foreground">Flag auto-impostati per coerenza:</p>
-                    {FASI_ORDINATE.indexOf(importFase) >= 3 && (
-                      <p>Proforma richiesta ed emessa</p>
-                    )}
-                    {FASI_ORDINATE.indexOf(importFase) >= 4 && (
-                      <p>Documenti ricevuti</p>
-                    )}
-                    {importFase === 'completata' && (
-                      <p>Pratica completata</p>
-                    )}
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        )}
 
         {/* ── TIPO CONTATTO ────────────────────────────────────── */}
         <div>
@@ -588,6 +380,15 @@ export function PraticaForm({ pratica, onSuccess, onCancel }: PraticaFormProps) 
               />
               {errors.consulente_id && (
                 <p className="text-xs text-destructive mt-1">{errors.consulente_id.message}</p>
+              )}
+              {!gestionaleDisabled && (
+                <div className="mt-2">
+                  <QuickAddConsulente
+                    onConsulenteCreato={(c) =>
+                      setValue('consulente_id', c.id, { shouldValidate: true, shouldDirty: true })
+                    }
+                  />
+                </div>
               )}
             </div>
           ) : (
@@ -758,7 +559,6 @@ export function PraticaForm({ pratica, onSuccess, onCancel }: PraticaFormProps) 
                 <div>
                   <Label className="text-sm font-medium mb-1.5 block">
                     Data Verifica
-                    {importMode && faseGte(fase, 'richiesta_proforma') && <span className="text-destructive"> *</span>}
                   </Label>
                   <Input type="date" {...register('data_verifica')} />
                   {errors.data_verifica && (
@@ -800,26 +600,19 @@ export function PraticaForm({ pratica, onSuccess, onCancel }: PraticaFormProps) 
         {faseGte(fase, 'richiesta_proforma') && (
           <div>
             <SectionLabel>Proforma</SectionLabel>
-            {/* In import con fase ≥ elaborazione_pratica, proforma è auto-settata */}
-            {importMode && faseGte(fase, 'elaborazione_pratica') ? (
-              <p className="text-sm text-muted-foreground">
-                Proforma richiesta ed emessa (auto-impostato per coerenza)
-              </p>
-            ) : (
-              <Controller
-                control={control}
-                name="proforma_richiesta"
-                render={({ field }) => (
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <Checkbox
-                      checked={field.value ?? false}
-                      onCheckedChange={(checked) => field.onChange(checked === true)}
-                    />
-                    <span className="text-sm">Proforma inviata al cliente</span>
-                  </label>
-                )}
-              />
-            )}
+            <Controller
+              control={control}
+              name="proforma_richiesta"
+              render={({ field }) => (
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <Checkbox
+                    checked={field.value ?? false}
+                    onCheckedChange={(checked) => field.onChange(checked === true)}
+                  />
+                  <span className="text-sm">Proforma inviata al cliente</span>
+                </label>
+              )}
+            />
           </div>
         )}
 
@@ -840,7 +633,7 @@ export function PraticaForm({ pratica, onSuccess, onCancel }: PraticaFormProps) 
                 </label>
               )}
             />
-            {documentiRicevuti === false && !importMode && (
+            {documentiRicevuti === false && (
               <div className="mt-3 flex items-start gap-2 bg-destructive/10 border border-destructive/30 rounded-lg px-3 py-2.5 text-xs text-destructive font-medium">
                 <AlertTriangle className="w-3.5 h-3.5 mt-0.5 shrink-0" />
                 Pratica BLOCCATA — i documenti non sono ancora stati ricevuti.
@@ -910,7 +703,7 @@ export function PraticaForm({ pratica, onSuccess, onCancel }: PraticaFormProps) 
           <Button
             type="submit"
             className="bg-primary hover:bg-primary/90"
-            disabled={isPending || numeroPraticaDuplicato}
+            disabled={isPending}
           >
             {isPending
               ? isEdit ? 'Salvataggio...' : 'Creazione...'

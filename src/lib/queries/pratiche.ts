@@ -214,7 +214,8 @@ export async function checkNumeroPraticaExists(numeroPratica: string): Promise<b
  * Import completata: se la pratica viene creata con fase = 'completata' e
  * sorveglianza_reminder_creato = true, il trigger on_pratica_completata NON
  * scatta (è BEFORE UPDATE, non INSERT). Il promemoria sorveglianza viene
- * creato qui usando data_scadenza fornita dall'utente — nessun calcolo automatico.
+ * creato qui calcolando completata_at + 365gg (o 1095gg per SA 8000),
+ * formula identica al trigger DB (migration 012) e al cron recovery.
  *
  * ATTENZIONE: non è atomico — se l'inserimento norme/promemoria fallisce,
  * la pratica esiste già. Accettabile per questo use case.
@@ -246,27 +247,37 @@ export async function createPratica({ norme, ...praticaData }: CreatePraticaData
   }
 
   // ── Import completata: promemoria sorveglianza manuale ─────────
-  // Il trigger on_pratica_completata NON scatta su INSERT.
-  // Creiamo il promemoria solo se l'utente ha fornito data_scadenza.
+  // Il trigger on_pratica_completata NON scatta su INSERT (è BEFORE UPDATE).
+  // Calcoliamo data_scadenza del promemoria come completata_at + 365/1095 giorni,
+  // identico alla formula del trigger DB (migration 012) e del cron recovery.
   // Insert diretto (non createPromemoria) per evitare side-effect notifica.
   // creato_da è NOT NULL nel DB — serve un utente valido
   const promCreator = created.assegnato_a ?? created.created_by
   if (
     created.fase === 'completata' &&
     created.sorveglianza_reminder_creato === true &&
-    created.data_scadenza &&
+    created.completata_at &&
     promCreator
   ) {
+    const hasSA8000 = norme?.includes('SA 8000') ?? false
+    const giorniScadenza = hasSA8000 ? 1095 : 365
+
+    const baseDate = new Date(created.completata_at)
+    baseDate.setDate(baseDate.getDate() + giorniScadenza)
+    const dataScadenzaProm = baseDate.toISOString().split('T')[0]
+
     const normeLabel = norme && norme.length > 0
-      ? norme.join(' + ')
-      : 'importata'
+      ? [...norme].sort().join(' + ')
+      : '?'
+
+    const testoSuffisso = hasSA8000 ? ' (SA8000: ciclo 36 mesi)' : ''
 
     const { error: promError } = await supabase.from('promemoria').insert({
       pratica_id:    created.id,
       creato_da:     promCreator,
       assegnato_a:   promCreator,
-      testo:         `Sorveglianza ${normeLabel} per pratica ${created.numero_pratica ?? 'importata'} — verificare scadenza ciclo certificativo`,
-      data_scadenza: created.data_scadenza,
+      testo:         `Sorveglianza ${normeLabel} per pratica ${created.numero_pratica ?? 'importata'} — verificare scadenza ciclo certificativo${testoSuffisso}`,
+      data_scadenza: dataScadenzaProm,
     })
 
     // Best-effort: se il promemoria fallisce non blocca la creazione pratica

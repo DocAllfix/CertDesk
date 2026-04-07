@@ -1,5 +1,7 @@
 export { PraticaForm }           from './PraticaForm'
 export { PraticaModal }          from './PraticaModal'
+export { ImportPraticaForm }     from './ImportPraticaForm'
+export { ImportPraticaModal }    from './ImportPraticaModal'
 export { PraticaDettaglio }      from './PraticaDettaglio'
 export { PraticaRow }            from './PraticaRow'
 export { AvanzaFaseModal }       from './AvanzaFaseModal'

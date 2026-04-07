@@ -92,16 +92,10 @@ export const praticaSchema = z.object({
 
   // ── Campi contesto form ─────────────────────────────────────────
   _isEdit:               z.boolean().optional(),
-  // ── Campi modalità importazione ────────────────────────────────
-  import_mode:           z.boolean().optional(),
-  import_fase:           faseEnum.optional(),
-  import_created_at:     z.string().optional(),
-  import_numero_pratica: z.string().trim().max(50, 'Massimo 50 caratteri').optional(),
-  import_completata_at:  z.string().optional(),
 }).superRefine((d, ctx) => {
   // ── Validazione data_scadenza ─────────────────────────────────
-  // In creazione normale (non import, non modifica): scadenza non può essere nel passato
-  if (!d._isEdit && !d.import_mode && d.data_scadenza) {
+  // In creazione (non modifica): scadenza non può essere nel passato
+  if (!d._isEdit && d.data_scadenza) {
     const oggi = new Date().toISOString().split('T')[0]
     if (d.data_scadenza < oggi) {
       ctx.addIssue({
@@ -125,38 +119,6 @@ export const praticaSchema = z.object({
       code: 'custom',
       message: 'La data di verifica non può essere successiva alla scadenza della pratica',
       path: ['data_verifica'],
-    })
-  }
-
-  // ── Validazione import mode ──────────────────────────────────
-  if (!d.import_mode) return
-
-  if (!d.import_fase) {
-    ctx.addIssue({
-      code: 'custom',
-      message: 'Seleziona la fase della pratica da importare',
-      path: ['import_fase'],
-    })
-    return // le validazioni successive dipendono dalla fase
-  }
-
-  const faseIdx = FASI.indexOf(d.import_fase)
-
-  // Fase ≥ richiesta_proforma (idx 2) → data_verifica obbligatoria
-  if (faseIdx >= 2 && !d.data_verifica) {
-    ctx.addIssue({
-      code: 'custom',
-      message: 'Data verifica obbligatoria per pratiche dalla fase Richiesta Proforma in poi',
-      path: ['data_verifica'],
-    })
-  }
-
-  // Fase = completata → completata_at obbligatoria
-  if (d.import_fase === 'completata' && !d.import_completata_at) {
-    ctx.addIssue({
-      code: 'custom',
-      message: 'Data completamento obbligatoria per pratiche completate',
-      path: ['import_completata_at'],
     })
   }
 })
@@ -223,3 +185,97 @@ export const avanzaFaseSchema = z.object({
 })
 
 export type AvanzaFaseFormValues = z.infer<typeof avanzaFaseSchema>
+
+// ══════════════════════════════════════════════════════════════════
+// IMPORT PRATICA PREESISTENTE
+// ══════════════════════════════════════════════════════════════════
+
+export const importPraticaSchema = z.object({
+  // ── Dati base pratica ──────────────────────────────────────────
+  cliente_id:    z.string().min(1, 'Seleziona un cliente'),
+  norme:         z.array(z.string()).min(1, 'Seleziona almeno una norma'),
+  ciclo:         z.enum([
+    'certificazione', 'prima_sorveglianza', 'seconda_sorveglianza', 'ricertificazione',
+  ] as const),
+  tipo_contatto: z.enum(['consulente', 'diretto'] as const),
+
+  consulente_id:   z.string().nullable().optional(),
+  referente_nome:  optStr.nullable(),
+  referente_email: optEmail,
+  referente_tel:   optStr.nullable(),
+
+  assegnato_a:   z.string().nullable().optional(),
+  note:          z.string().trim().max(2000, 'Massimo 2000 caratteri').nullable().optional(),
+  priorita:      z.number().int().min(0).max(2),
+
+  // ── Campi fase-condizionali ────────────────────────────────────
+  auditor_id:    z.string().nullable().optional(),
+  data_verifica: z.string().nullable().optional(),
+  sede_verifica: z.string().trim().max(200, 'Massimo 200 caratteri').nullable().optional(),
+
+  numero_certificato:         z.string().trim().max(100, 'Massimo 100 caratteri').nullable().optional(),
+  data_emissione_certificato: z.string().nullable().optional(),
+
+  // ── Campi import ───────────────────────────────────────────────
+  import_fase:           faseEnum,
+  import_numero_pratica: z.string().trim().max(50, 'Massimo 50 caratteri').optional(),
+  import_created_at:     z.string().optional(),
+  import_completata_at:  z.string().optional(),
+
+  // data_scadenza: obbligatoria solo per fasi NON completata (inserita dall'utente).
+  // Per fase completata viene calcolata automaticamente nel submit.
+  data_scadenza: z.string().optional(),
+}).superRefine((d, ctx) => {
+  // ── Tipo contatto ─────────────────────────────────────────────
+  if (d.tipo_contatto === 'consulente' && !d.consulente_id) {
+    ctx.addIssue({
+      code: 'custom',
+      message: 'Seleziona un consulente',
+      path: ['consulente_id'],
+    })
+  }
+
+  const faseIdx = FASI.indexOf(d.import_fase)
+
+  // ── Fase ≥ richiesta_proforma (idx 2) → data_verifica obbligatoria ──
+  if (faseIdx >= 2 && !d.data_verifica) {
+    ctx.addIssue({
+      code: 'custom',
+      message: 'Data verifica obbligatoria per pratiche dalla fase Richiesta Proforma in poi',
+      path: ['data_verifica'],
+    })
+  }
+
+  // ── Branch fase = completata ──────────────────────────────────
+  if (d.import_fase === 'completata') {
+    if (!d.import_completata_at) {
+      ctx.addIssue({
+        code: 'custom',
+        message: 'Data completamento obbligatoria per pratiche completate',
+        path: ['import_completata_at'],
+      })
+    }
+    // completata_at non può essere nel futuro
+    if (d.import_completata_at) {
+      const oggi = new Date().toISOString().split('T')[0]
+      if (d.import_completata_at > oggi) {
+        ctx.addIssue({
+          code: 'custom',
+          message: 'La data di completamento non può essere nel futuro',
+          path: ['import_completata_at'],
+        })
+      }
+    }
+  } else {
+    // ── Branch fase ≠ completata → data_scadenza obbligatoria ───
+    if (!d.data_scadenza) {
+      ctx.addIssue({
+        code: 'custom',
+        message: 'La data di scadenza è obbligatoria',
+        path: ['data_scadenza'],
+      })
+    }
+  }
+})
+
+export type ImportPraticaFormValues = z.infer<typeof importPraticaSchema>

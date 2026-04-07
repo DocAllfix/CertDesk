@@ -12,7 +12,7 @@ import { useState } from 'react'
 import { useSearchParams, useNavigate } from 'react-router-dom'
 import { format, addDays } from 'date-fns'
 import {
-  Plus, Search, Filter, ArrowUpDown, Loader2,
+  Plus, Search, Filter, ArrowUpDown, Loader2, Import,
 } from 'lucide-react'
 
 import { Button }   from '@/components/ui/button'
@@ -23,6 +23,7 @@ import {
 
 import { PraticaRow }   from '@/components/pratiche/PraticaRow'
 import { PraticaModal } from '@/components/pratiche/PraticaModal'
+import { ImportPraticaModal } from '@/components/pratiche/ImportPraticaModal'
 
 import { usePratiche, useSospendiPratica, useArchiviaPratica, useAnnullaPratica, usePrefetchPratica } from '@/hooks/usePratiche'
 import { usePratica }      from '@/hooks/usePratiche'
@@ -162,6 +163,7 @@ export default function PratichePage() {
 
   // ── State locale: modal nuova pratica / modifica ──────────────
   const [nuovaOpen,   setNuovaOpen]   = useState(false)
+  const [importOpen,  setImportOpen]  = useState(false)
   const [editId,      setEditId]      = useState<string | null>(null)
 
   // ── Lettura URL params ────────────────────────────────────────
@@ -311,6 +313,18 @@ export default function PratichePage() {
           <Plus className="w-3.5 h-3.5 mr-1.5" />
           Nuova Pratica
         </Button>
+
+        {/* Importa pratica (solo admin/responsabile) */}
+        {(isAdmin || isResponsabile) && (
+          <Button
+            variant="outline"
+            className="h-8 px-4 text-sm font-medium rounded-md"
+            onClick={() => setImportOpen(true)}
+          >
+            <Import className="w-3.5 h-3.5 mr-1.5" />
+            Importa
+          </Button>
+        )}
 
         <div className="w-px h-5 bg-border mx-1" />
 
@@ -533,6 +547,12 @@ export default function PratichePage() {
       <PraticaModal
         open={nuovaOpen}
         onClose={() => setNuovaOpen(false)}
+      />
+
+      {/* Modal importazione pratica preesistente */}
+      <ImportPraticaModal
+        open={importOpen}
+        onClose={() => setImportOpen(false)}
       />
 
       {/* Modal modifica pratica (carica dati completi on-demand) */}
