@@ -11,8 +11,8 @@
  */
 
 import { avanzaFase } from '@/lib/queries/pratiche'
-import { createFaseChangeNotifications } from './notifications'
-import type { FaseType, UserProfile } from '@/types/app.types'
+import { createFaseChangeNotifications, notifyAuditCompletato } from './notifications'
+import type { FaseType, UserProfile, AuditIntegratoRef } from '@/types/app.types'
 
 // ── Parametri orchestrator ───────────────────────────────────────
 
@@ -31,6 +31,8 @@ export interface ExecuteAvanzaFaseParams {
   clienteNome?: string
   /** Motivo opzionale (usato in storico_fasi) */
   motivo?: string
+  /** Ref audit integrato — se presente, controlla completamento audit dopo avanzamento */
+  audit?: AuditIntegratoRef | null
 }
 
 // ── Orchestrator principale ──────────────────────────────────────
@@ -42,7 +44,7 @@ export interface ExecuteAvanzaFaseParams {
  * @throws Error — messaggio dal trigger DB se la transizione è rifiutata
  */
 export async function executeAvanzaFase(params: ExecuteAvanzaFaseParams) {
-  const { praticaId, oldFase, nuovaFase, userId, allUsers, clienteNome, motivo } = params
+  const { praticaId, oldFase, nuovaFase, userId, allUsers, clienteNome, motivo, audit } = params
 
   // 1. Update DB — il trigger validate_fase_transition valida tutto
   const updated = await avanzaFase(praticaId, nuovaFase, userId, motivo)
@@ -65,6 +67,14 @@ export async function executeAvanzaFase(params: ExecuteAvanzaFaseParams) {
   ).catch(() => {
     // Silenzio: le notifiche sono best-effort
   })
+
+  // 3. Se la pratica fa parte di un audit e viene completata,
+  //    controlla se tutto l'audit è completato e notifica
+  if (audit && nuovaFase === 'completata') {
+    notifyAuditCompletato(audit, { id: updated.id }, userId, allUsers).catch(() => {
+      // Silenzio: best-effort
+    })
+  }
 
   return updated
 }

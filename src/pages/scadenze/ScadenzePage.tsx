@@ -26,12 +26,13 @@ import {
 import { BadgeFase }    from '@/components/shared/BadgeFase'
 import { BadgeUrgenza } from '@/components/shared/BadgeUrgenza'
 import { BadgeCiclo }   from '@/components/shared/BadgeCiclo'
+import { BadgeAudit }   from '@/components/shared/BadgeAudit'
 
 import { usePratiche, useUpdatePratica } from '@/hooks/usePratiche'
 import { toast } from 'sonner'
 
 import type { Tables } from '@/lib/supabase'
-import type { Cliente, Consulente, UserProfile } from '@/types/app.types'
+import type { Cliente, Consulente, UserProfile, AuditIntegratoRef } from '@/types/app.types'
 
 // ── Tipo raw Supabase ─────────────────────────────────────────────
 
@@ -40,6 +41,7 @@ type PraticaScadenzaRaw = Tables<'pratiche'> & {
   consulente:     Pick<Consulente, 'id' | 'nome' | 'cognome'> | null
   assegnato:      Pick<UserProfile, 'id' | 'nome' | 'cognome' | 'avatar_url'> | null
   pratiche_norme: { norma_codice: string }[]
+  audit:          AuditIntegratoRef | null
 }
 
 // ── Costanti ──────────────────────────────────────────────────────
@@ -187,6 +189,9 @@ function RigaScadenza({ pratica }: RigaScadenzaProps) {
           ))}
           {norme.length > 2 && (
             <span className="text-[11px] text-muted-foreground">+{norme.length - 2}</span>
+          )}
+          {pratica.audit && (
+            <BadgeAudit numeroAudit={pratica.audit.numero_audit} auditId={pratica.audit.id} />
           )}
         </div>
       </td>

@@ -25,7 +25,7 @@ import { useTeamMembers }  from '@/hooks/useTeamMembers'
 import { useAuth }         from '@/hooks/useAuth'
 import { canAdvanceFase }  from '@/lib/workflow'
 
-import type { PraticaListItem, FiltriPratiche, FaseType } from '@/types/app.types'
+import type { PraticaListItem, FiltriPratiche, FaseType, AuditIntegratoRef } from '@/types/app.types'
 import type { Tables } from '@/lib/supabase'
 
 // ── Tipo raw Supabase ────────────────────────────────────────────
@@ -39,6 +39,7 @@ type PraticaListRaw = Tables<'pratiche'> & {
   consulente:     Pick<Consulente, 'id' | 'nome' | 'cognome'> | null
   assegnato:      Pick<UserProfile, 'id' | 'nome' | 'cognome' | 'avatar_url'> | null
   pratiche_norme: { norma_codice: string }[]
+  audit:          AuditIntegratoRef | null
 }
 
 function toListItem(raw: PraticaListRaw): PraticaListItem {
@@ -48,6 +49,7 @@ function toListItem(raw: PraticaListRaw): PraticaListItem {
       codice: pn.norma_codice,
       nome:   pn.norma_codice,
     })),
+    audit: raw.audit ?? null,
   }
 }
 
@@ -158,6 +160,7 @@ export default function PipelinePage() {
         nuovaFase: targetFase,
         userId: user.id,
         allUsers: team.map(t => ({ id: t.id, ruolo: t.ruolo, nome: t.nome, cognome: t.cognome })),
+        audit: pratica.audit ?? undefined,
       },
       {
         onError: (err) => {

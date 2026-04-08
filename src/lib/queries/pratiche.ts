@@ -12,10 +12,12 @@ import type {
   FiltriPratiche,
   FaseType,
   PraticaConRelazioni,
+  PraticaListItem,
   NormaCatalogo,
   Cliente,
   Consulente,
   UserProfile,
+  AuditIntegratoRef,
 } from '@/types/app.types'
 
 // ── Tipi esportati ───────────────────────────────────────────────
@@ -36,6 +38,7 @@ type PraticaDetailRaw = Tables<'pratiche'> & {
   created_by_profile: Pick<UserProfile, 'id' | 'nome' | 'cognome'> | null
   updated_by_profile: Pick<UserProfile, 'id' | 'nome' | 'cognome'> | null
   pratiche_norme:     { norma_codice: string; norme_catalogo: NormaCatalogo | null }[]
+  audit:              AuditIntegratoRef | null
 }
 
 /**
@@ -90,7 +93,8 @@ export async function getPratiche(filtri: FiltriPratiche = {}) {
       'cliente:clienti(id,nome,ragione_sociale), ' +
       'consulente:consulenti(id,nome,cognome), ' +
       'assegnato:user_profiles!pratiche_assegnato_a_fkey(id,nome,cognome,avatar_url), ' +
-      'pratiche_norme(norma_codice)'
+      'pratiche_norme(norma_codice), ' +
+      'audit:audit_integrati(id,numero_audit)'
     )
 
   // Filtro archiviate: solo_archiviate ha precedenza, poi includi_archiviate
@@ -112,6 +116,8 @@ export async function getPratiche(filtri: FiltriPratiche = {}) {
   if (filtri.assegnato_a)      query = query.eq('assegnato_a', filtri.assegnato_a)
   if (filtri.cliente_id)       query = query.eq('cliente_id', filtri.cliente_id)
   if (filtri.priorita != null) query = query.eq('priorita', filtri.priorita)
+  // audit_integrato_id: colonna aggiunta in migration 020, cast necessario finché database.types.ts non viene rigenerato
+  if (filtri.audit_integrato_id) query = query.eq('audit_integrato_id' as 'id', filtri.audit_integrato_id)
   if (filtri.scadenza_max)     query = query.lte('data_scadenza', filtri.scadenza_max)
   if (praticaIds)              query = query.in('id', praticaIds)
 
@@ -133,7 +139,9 @@ export async function getPratiche(filtri: FiltriPratiche = {}) {
 
   const { data, error } = await query
   if (error) throw new Error(`Errore nel caricamento delle pratiche: ${error.message}`)
-  return data ?? []
+  // Cast necessario: audit_integrati non è ancora in database.types.ts,
+  // Supabase inferisce GenericStringError sulla relazione audit.
+  return (data ?? []) as unknown as PraticaListItem[]
 }
 
 /**
@@ -152,7 +160,8 @@ export async function getPratica(id: string): Promise<PraticaConRelazioni> {
       'auditor:user_profiles!pratiche_auditor_id_fkey(id,nome,cognome,avatar_url), ' +
       'created_by_profile:user_profiles!pratiche_created_by_fkey(id,nome,cognome), ' +
       'updated_by_profile:user_profiles!pratiche_updated_by_fkey(id,nome,cognome), ' +
-      'pratiche_norme(norma_codice,norme_catalogo(codice,nome,ordine))'
+      'pratiche_norme(norma_codice,norme_catalogo(codice,nome,ordine)), ' +
+      'audit:audit_integrati(id,numero_audit)'
     )
     .eq('id', id)
     .single()
@@ -182,6 +191,7 @@ export async function getPratica(id: string): Promise<PraticaConRelazioni> {
     created_by_profile: raw.created_by_profile as UserProfile | null,
     updated_by_profile: raw.updated_by_profile as UserProfile | null,
     norme,
+    audit:              raw.audit ?? null,
   } as PraticaConRelazioni
 }
 

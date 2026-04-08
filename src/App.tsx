@@ -15,6 +15,8 @@ import DashboardPage   from '@/pages/dashboard/DashboardPage'
 import ScadenzePage    from '@/pages/scadenze/ScadenzePage'
 import PromemoriaPage  from '@/pages/database/PromemoriaPage'
 import ArchivioPage    from '@/pages/database/ArchivioPage'
+import AuditIntegratiPage        from '@/pages/audit-integrati/AuditIntegratiPage'
+import AuditIntegratoDettaglioPage from '@/pages/audit-integrati/AuditIntegratoDettaglioPage'
 
 // ── QueryClient ──────────────────────────────────────────────────
 
@@ -74,6 +76,8 @@ export default function App() {
                 <Route path="pratiche/:id" element={<PraticaDettaglioPage />} />
                 <Route path="pipeline" element={<PipelinePage />} />
                 <Route path="scadenze" element={<ScadenzePage />} />
+                <Route path="audit-integrati" element={<AuditIntegratiPage />} />
+                <Route path="audit-integrati/:id" element={<AuditIntegratoDettaglioPage />} />
 
                 {/* Database */}
                 <Route path="database/clienti" element={<ClientiPage />} />

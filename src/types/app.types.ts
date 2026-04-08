@@ -22,6 +22,18 @@ export type MessaggioInterno = Tables<'messaggi_interni'>
 export type Promemoria = Tables<'promemoria'>
 export type NormaCatalogo = Tables<'norme_catalogo'>
 
+/** Audit Integrato — definito manualmente finché database.types.ts non viene rigenerato */
+export interface AuditIntegrato {
+  id: string
+  numero_audit: string | null
+  cliente_id: string
+  note: string | null
+  created_at: string | null
+  created_by: string | null
+  updated_at: string | null
+  updated_by: string | null
+}
+
 // ── Enum aliases ────────────────────────────────────────────────
 
 export type UserRole = DbEnum<'user_role'>
@@ -34,6 +46,12 @@ export type MessaggioTipo = DbEnum<'messaggio_tipo'>
 
 // ── Tipi con Relazioni ──────────────────────────────────────────
 
+/** Dati minimi audit per badge/riferimento sulle pratiche */
+export interface AuditIntegratoRef {
+  id: string
+  numero_audit: string
+}
+
 /** Pratica con tutte le relazioni necessarie per lista e dettaglio */
 export interface PraticaConRelazioni extends Pratica {
   cliente: Cliente
@@ -43,6 +61,7 @@ export interface PraticaConRelazioni extends Pratica {
   created_by_profile: UserProfile | null
   updated_by_profile: UserProfile | null
   norme: NormaCatalogo[]
+  audit: AuditIntegratoRef | null
 }
 
 /** Pratica con dati minimi per lista/tabella (performance) */
@@ -51,6 +70,51 @@ export interface PraticaListItem extends Pratica {
   consulente: Pick<Consulente, 'id' | 'nome' | 'cognome'> | null
   assegnato: Pick<UserProfile, 'id' | 'nome' | 'cognome' | 'avatar_url'> | null
   norme: Pick<NormaCatalogo, 'codice' | 'nome'>[]
+  audit: AuditIntegratoRef | null
+}
+
+/** Audit integrato con pratiche figlie e dati derivati (dalla view vw_audit_integrati) */
+export interface AuditIntegratoConPratiche extends AuditIntegrato {
+  cliente: Pick<Cliente, 'id' | 'nome' | 'ragione_sociale'>
+  pratiche: PraticaListItem[]
+  pratiche_totali: number
+  pratiche_completate: number
+  is_completato: boolean
+  prima_scadenza: string | null
+}
+
+/** Riga dalla view vw_audit_integrati (senza pratiche dettagliate) */
+export interface AuditIntegratoView extends AuditIntegrato {
+  pratiche_totali: number
+  pratiche_completate: number
+  is_completato: boolean
+  pratiche_attive: number
+  prima_scadenza: string | null
+  ultima_scadenza: string | null
+  ha_archiviate: boolean
+}
+
+/** Input per il wizard di creazione audit integrato */
+export interface CreaAuditIntegratoInput {
+  cliente_id: string
+  ciclo: CicloType
+  tipo_contatto: ContattoType
+  consulente_id?: string | null
+  referente_nome?: string | null
+  referente_email?: string | null
+  referente_tel?: string | null
+  note?: string | null
+  pratiche: CreaAuditPraticaInput[]
+}
+
+/** Dati per singola pratica dentro il wizard audit */
+export interface CreaAuditPraticaInput {
+  norma_codice: string
+  assegnato_a?: string | null
+  auditor_id?: string | null
+  data_verifica?: string | null
+  data_scadenza?: string | null
+  sede_verifica?: string | null
 }
 
 /** Profilo utente con le norme di competenza (per responsabili) */
@@ -123,6 +187,8 @@ export interface FiltriPratiche {
   norma_codice?: string | null
   /** Filtra per priorità (0=normale, 1=alta, 2=urgente) */
   priorita?: number | null
+  /** Filtra per audit integrato (UUID) */
+  audit_integrato_id?: string | null
   /** Mostra anche pratiche archiviate */
   includi_archiviate?: boolean
   /** Mostra SOLO pratiche archiviate */

@@ -23,7 +23,7 @@
  */
 
 import { supabase } from '@/lib/supabase'
-import type { FaseType, NotificaTipo, UserProfile, Pratica } from '@/types/app.types'
+import type { FaseType, NotificaTipo, UserProfile, Pratica, AuditIntegratoRef } from '@/types/app.types'
 import { FASE_LABELS } from './fase-transitions'
 
 // ── Tipo interno ─────────────────────────────────────────────────
@@ -224,4 +224,47 @@ export async function notifyDocumentiRicevuti(
     titolo:          `Documenti ricevuti — ${pratica.numero_pratica ?? 'N/D'}`,
     messaggio:       `I documenti della pratica ${pratica.numero_pratica ?? 'N/D'} sono stati ricevuti. È ora possibile avanzare alla fase Firme.`,
   })
+}
+
+// ── Notifica completamento audit integrato ──────────────────────
+
+/**
+ * Controlla se tutte le pratiche di un audit sono completate e, in tal caso,
+ * invia una notifica "success" a tutti gli admin.
+ *
+ * Chiamata dopo un avanzamento a "completata" per pratiche con audit_integrato_id.
+ * Best-effort: errori silenziati.
+ */
+export async function notifyAuditCompletato(
+  audit: AuditIntegratoRef,
+  praticaCompletata: Pick<Pratica, 'id'>,
+  userId: string,
+  allUsers: Pick<UserProfile, 'id' | 'ruolo'>[]
+): Promise<void> {
+  // Conta le pratiche dell'audit e quante sono completate
+  const { data: pratiche, error } = await supabase
+    .from('pratiche')
+    .select('id, fase')
+    .eq('audit_integrato_id' as 'id', audit.id)
+
+  if (error || !pratiche) return
+
+  const totali = pratiche.length
+  const completate = pratiche.filter(p => p.fase === 'completata').length
+
+  // Se non tutte completate, niente da notificare
+  if (completate < totali) return
+
+  // Audit completato! Notifica tutti gli admin
+  const admins = allUsers.filter(u => u.ruolo === 'admin' && u.id !== userId)
+
+  const notifiche: NotificaDaCreare[] = admins.map(admin => ({
+    destinatario_id: admin.id,
+    pratica_id:      praticaCompletata.id,
+    tipo:            'success' as NotificaTipo,
+    titolo:          `Audit Integrato completato — ${audit.numero_audit}`,
+    messaggio:       `Tutte le ${totali} pratiche dell'audit integrato ${audit.numero_audit} sono state completate.`,
+  }))
+
+  await Promise.allSettled(notifiche.map(inviaNotifica))
 }

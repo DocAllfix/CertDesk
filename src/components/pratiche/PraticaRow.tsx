@@ -9,13 +9,14 @@
  */
 import { memo } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { ExternalLink, Pencil, ChevronRight, PauseCircle, XCircle, MoreHorizontal, Sparkles, Check, Archive, Trash2 } from 'lucide-react'
+import { ExternalLink, Pencil, ChevronRight, PauseCircle, XCircle, MoreHorizontal, Check, Archive, Trash2 } from 'lucide-react'
 import { differenceInDays, parseISO } from 'date-fns'
 
 import { BadgeFase } from '@/components/shared/BadgeFase'
 import { BadgeCiclo } from '@/components/shared/BadgeCiclo'
 import { BadgeStato } from '@/components/shared/BadgeStato'
 import { BadgeUrgenza } from '@/components/shared/BadgeUrgenza'
+import { BadgeAudit } from '@/components/shared/BadgeAudit'
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -201,10 +202,8 @@ export const PraticaRow = memo(function PraticaRow({
               {n.codice}
             </span>
           ))}
-          {pratica.norme.length > 1 && (
-            <span className="text-xs bg-secondary/10 text-secondary px-1.5 py-0.5 rounded font-medium flex items-center gap-0.5">
-              <Sparkles className="w-2.5 h-2.5" />
-            </span>
+          {pratica.audit && (
+            <BadgeAudit numeroAudit={pratica.audit.numero_audit} auditId={pratica.audit.id} />
           )}
         </div>
       </td>

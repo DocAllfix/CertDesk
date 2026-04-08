@@ -4,7 +4,7 @@
  * Riutilizzabile in ConsulenteModal e PraticaForm.
  */
 import { useState } from 'react'
-import { Search, X, Sparkles } from 'lucide-react'
+import { Search, X } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 
 const ALL_NORME = [
@@ -33,8 +33,6 @@ export function NormeMultiSelect({ value, onChange, disabled }: NormeMultiSelect
     else onChange([...value, n])
   }
 
-  const isIntegrated = value.length > 1
-
   return (
     <div className={`space-y-2 ${disabled ? 'opacity-60' : ''}`}>
       {/* Tag selezionati */}
@@ -57,14 +55,6 @@ export function NormeMultiSelect({ value, onChange, disabled }: NormeMultiSelect
               )}
             </span>
           ))}
-        </div>
-      )}
-
-      {/* Banner Audit Integrato */}
-      {isIntegrated && (
-        <div className="flex items-center gap-2 bg-secondary/10 border border-secondary/30 rounded-lg px-3 py-2.5 text-xs text-secondary font-semibold">
-          <Sparkles className="w-3.5 h-3.5 shrink-0" />
-          ✦ Audit Integrato: {value.join(' + ')}
         </div>
       )}
 

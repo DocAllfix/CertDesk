@@ -12,7 +12,7 @@
 import { useState, useCallback } from 'react'
 import { Link } from 'react-router-dom'
 import {
-  ArrowLeft, ChevronRight, Sparkles, Check,
+  ArrowLeft, ChevronRight, Check,
   User, Calendar, MapPin,
   Building2, FileText, Phone, Mail,
 } from 'lucide-react'
@@ -23,6 +23,8 @@ import { Button } from '@/components/ui/button'
 import { BadgeFase } from '@/components/shared/BadgeFase'
 import { BadgeCiclo } from '@/components/shared/BadgeCiclo'
 import { BadgeStato } from '@/components/shared/BadgeStato'
+import { BadgeAudit } from '@/components/shared/BadgeAudit'
+import { AuditIntegratoSection } from '@/components/audit/AuditIntegratoSection'
 import { PraticaModal }          from './PraticaModal'
 import { AvanzaFaseModal }       from './AvanzaFaseModal'
 import { BloccoDocumentiAlert }  from './BloccoDocumentiAlert'
@@ -158,11 +160,8 @@ export function PraticaDettaglio({ pratica }: PraticaDettaglioProps) {
                 {n.codice}
               </span>
             ))}
-            {pratica.norme.length > 1 && (
-              <span className="text-xs bg-secondary/10 text-secondary px-2.5 py-1 rounded-md font-medium flex items-center gap-1">
-                <Sparkles className="w-3 h-3" />
-                Audit Integrato
-              </span>
+            {pratica.audit && (
+              <BadgeAudit numeroAudit={pratica.audit.numero_audit} auditId={pratica.audit.id} />
             )}
           </div>
         </div>
@@ -403,6 +402,10 @@ export function PraticaDettaglio({ pratica }: PraticaDettaglioProps) {
 
       {renderHeader()}
       {renderStepper()}
+
+      {pratica.audit && (
+        <AuditIntegratoSection auditId={pratica.audit.id} currentPraticaId={pratica.id} />
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-5">
         <div className="lg:col-span-3 space-y-5">

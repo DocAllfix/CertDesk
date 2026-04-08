@@ -14,7 +14,7 @@
 import { useState, useEffect } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
 import {
-  LayoutDashboard, FolderKanban, Columns3, CalendarClock,
+  LayoutDashboard, FolderKanban, Columns3, CalendarClock, Sparkles,
   Database, Users, UserCheck, Archive, ClipboardList,
   ChevronLeft, ChevronRight, ChevronDown, LogOut,
 } from 'lucide-react'
@@ -27,10 +27,11 @@ import { APP_CONFIG } from '@/config/app.config'
 // ── Navigazione ─────────────────────────────────────────────────────
 
 const NAV_MAIN = [
-  { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { path: '/pratiche',  label: 'Pratiche',  icon: FolderKanban    },
-  { path: '/pipeline',  label: 'Pipeline',  icon: Columns3        },
-  { path: '/scadenze',  label: 'Scadenze',  icon: CalendarClock   },
+  { path: '/dashboard',        label: 'Dashboard',        icon: LayoutDashboard },
+  { path: '/pratiche',         label: 'Pratiche',         icon: FolderKanban    },
+  { path: '/audit-integrati',  label: 'Audit Integrati',  icon: Sparkles        },
+  { path: '/pipeline',         label: 'Pipeline',         icon: Columns3        },
+  { path: '/scadenze',         label: 'Scadenze',         icon: CalendarClock   },
 ] as const
 
 const DATABASE_SUB = [

@@ -175,6 +175,7 @@ export function AvanzaFaseModal({ open, onClose, pratica, targetFase }: AvanzaFa
         allUsers: team.map(t => ({ id: t.id, ruolo: t.ruolo, nome: t.nome, cognome: t.cognome })),
         clienteNome: pratica.cliente?.nome ?? pratica.cliente?.ragione_sociale ?? undefined,
         motivo: motivoClean || undefined,
+        audit: pratica.audit ?? undefined,
       },
       {
         onSuccess: () => {

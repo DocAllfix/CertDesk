@@ -21,7 +21,7 @@ import {
   type UpdatePratica,
 } from '@/lib/queries/pratiche'
 import { executeAvanzaFase } from '@/lib/workflow'
-import type { FiltriPratiche, FaseType, UserProfile } from '@/types/app.types'
+import type { FiltriPratiche, FaseType, UserProfile, AuditIntegratoRef } from '@/types/app.types'
 
 // ── Query Keys ───────────────────────────────────────────────────
 
@@ -105,6 +105,7 @@ export function useAvanzaFase() {
       allUsers,
       clienteNome,
       motivo,
+      audit,
     }: {
       id: string
       oldFase: FaseType
@@ -113,6 +114,7 @@ export function useAvanzaFase() {
       allUsers: Pick<UserProfile, 'id' | 'ruolo' | 'nome' | 'cognome'>[]
       clienteNome?: string
       motivo?: string
+      audit?: AuditIntegratoRef | null
     }) => executeAvanzaFase({
       praticaId: id,
       oldFase,
@@ -121,10 +123,12 @@ export function useAvanzaFase() {
       allUsers,
       clienteNome,
       motivo,
+      audit,
     }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: praticheKeys.all })
       qc.invalidateQueries({ queryKey: ['dashboard'] })
+      qc.invalidateQueries({ queryKey: ['audit-integrati'] })
     },
   })
 }

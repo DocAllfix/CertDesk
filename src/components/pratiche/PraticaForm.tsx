@@ -27,6 +27,7 @@ import {
 import { Checkbox } from '@/components/ui/checkbox'
 import { NormeMultiSelect } from '@/components/shared/NormeMultiSelect'
 import { QuickAddCliente }  from '@/components/clienti/QuickAddCliente'
+import { AuditIntegratoWizard } from '@/components/audit/AuditIntegratoWizard'
 import { QuickAddConsulente } from '@/components/consulenti/QuickAddConsulente'
 
 import { useAuth }        from '@/hooks/useAuth'
@@ -156,6 +157,10 @@ export function PraticaForm({ pratica, onSuccess, onCancel }: PraticaFormProps) 
   const normeSelezionate = watch('norme')
   const documentiRicevuti = watch('documenti_ricevuti')
 
+  // Wizard audit integrato — si apre quando l'utente seleziona 2+ norme in creazione
+  const [wizardOpen, setWizardOpen] = useState(false)
+  const showAuditBanner = !isEdit && (normeSelezionate?.length ?? 0) > 1
+
   // In modifica, la fase è quella della pratica esistente.
   // In creazione normale, undefined (nessun campo fase-specifico visibile).
   const fase: FaseType | undefined = pratica?.fase
@@ -278,6 +283,7 @@ export function PraticaForm({ pratica, onSuccess, onCancel }: PraticaFormProps) 
   // ── Render ──────────────────────────────────────────────────────
 
   return (
+    <>
     <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col flex-1 min-h-0 overflow-hidden">
 
       {/* Corpo scrollabile */}
@@ -440,6 +446,24 @@ export function PraticaForm({ pratica, onSuccess, onCancel }: PraticaFormProps) 
               />
               {errors.norme && (
                 <p className="text-xs text-destructive mt-1">{errors.norme.message}</p>
+              )}
+
+              {/* Banner auto-switch a wizard audit integrato */}
+              {showAuditBanner && (
+                <div className="flex items-center justify-between bg-secondary/10 border border-secondary/30 rounded-lg px-3 py-2.5 mt-2">
+                  <div className="flex items-center gap-2 text-xs text-secondary font-semibold">
+                    <Sparkles className="w-3.5 h-3.5 shrink-0" />
+                    {normeSelezionate.length} norme selezionate — Audit Integrato
+                  </div>
+                  <Button
+                    type="button"
+                    size="sm"
+                    className="h-7 px-3 text-xs bg-secondary hover:bg-secondary/90 text-secondary-foreground"
+                    onClick={() => setWizardOpen(true)}
+                  >
+                    Apri wizard
+                  </Button>
+                </div>
               )}
             </div>
 
@@ -689,14 +713,7 @@ export function PraticaForm({ pratica, onSuccess, onCancel }: PraticaFormProps) 
 
       {/* ── Footer fisso ─────────────────────────────────────────── */}
       <div className="px-6 py-4 border-t border-border bg-muted/20 flex items-center justify-between shrink-0">
-        {/* Banner Audit Integrato in footer (riepiloga la scelta norme) */}
-        {normeSelezionate.length > 1 && (
-          <span className="flex items-center gap-1.5 text-xs text-secondary font-medium">
-            <Sparkles className="w-3.5 h-3.5" />
-            Audit Integrato ({normeSelezionate.length} norme)
-          </span>
-        )}
-        <div className={`flex gap-2 ${normeSelezionate.length > 1 ? '' : 'ml-auto'}`}>
+        <div className="flex gap-2 ml-auto">
           <Button variant="ghost" type="button" onClick={onCancel} disabled={isPending}>
             Annulla
           </Button>
@@ -714,5 +731,19 @@ export function PraticaForm({ pratica, onSuccess, onCancel }: PraticaFormProps) 
       </div>
 
     </form>
+
+    {/* Wizard Audit Integrato — si apre dal banner sopra */}
+    <AuditIntegratoWizard
+      open={wizardOpen}
+      onClose={() => { setWizardOpen(false); onSuccess() }}
+      prefill={{
+        cliente_id: watch('cliente_id'),
+        ciclo: watch('ciclo'),
+        norme: normeSelezionate,
+        tipo_contatto: tipoContatto,
+        consulente_id: watch('consulente_id'),
+      }}
+    />
+    </>
   )
 }

@@ -11,6 +11,7 @@ import { useNavigate } from 'react-router-dom'
 import { AlertTriangle, Calendar } from 'lucide-react'
 
 import { BadgeUrgenza }  from '@/components/shared/BadgeUrgenza'
+import { BadgeAudit }    from '@/components/shared/BadgeAudit'
 import { isBloccataFase4 } from '@/lib/workflow'
 import type { PraticaListItem } from '@/types/app.types'
 
@@ -106,6 +107,9 @@ export const KanbanCard = memo(function KanbanCard({ pratica, phaseColor }: Kanb
             <span className="text-[11px] bg-muted/60 px-1.5 py-0.5 rounded text-muted-foreground">
               {CICLO_SHORT[pratica.ciclo] ?? pratica.ciclo}
             </span>
+            {pratica.audit && (
+              <BadgeAudit numeroAudit={pratica.audit.numero_audit} auditId={pratica.audit.id} />
+            )}
           </div>
 
           {/* Deadline + urgency */}
