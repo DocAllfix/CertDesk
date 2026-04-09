@@ -23,6 +23,24 @@ export default defineConfig(({ mode }) => ({
   ].filter(Boolean),
   build: {
     sourcemap: true,
+    rolldownOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes('node_modules/react-dom') || id.includes('node_modules/react/') || id.includes('node_modules/react-router')) {
+            return 'vendor'
+          }
+          if (id.includes('node_modules/@supabase')) {
+            return 'supabase'
+          }
+          if (id.includes('node_modules/@radix-ui')) {
+            return 'ui'
+          }
+          if (id.includes('node_modules/recharts') || id.includes('node_modules/d3-')) {
+            return 'charts'
+          }
+        },
+      },
+    },
   },
   resolve: {
     alias: {
