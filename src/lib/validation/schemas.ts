@@ -65,7 +65,9 @@ export const praticaSchema = z.object({
   cliente_id:    z.string().min(1, 'Seleziona un cliente'),
   norme:         z.array(z.string()).min(1, 'Seleziona almeno una norma'),
   ciclo:         z.enum([
-    'certificazione', 'prima_sorveglianza', 'seconda_sorveglianza', 'ricertificazione',
+    'certificazione', 'prima_sorveglianza', 'seconda_sorveglianza',
+    'terza_sorveglianza', 'quarta_sorveglianza', 'follow_up_review',
+    'ricertificazione', 'ricertificazione_30m',
   ] as const),
   tipo_contatto: z.enum(['consulente', 'diretto'] as const),
 
@@ -195,7 +197,9 @@ export const importPraticaSchema = z.object({
   cliente_id:    z.string().min(1, 'Seleziona un cliente'),
   norme:         z.array(z.string()).min(1, 'Seleziona almeno una norma'),
   ciclo:         z.enum([
-    'certificazione', 'prima_sorveglianza', 'seconda_sorveglianza', 'ricertificazione',
+    'certificazione', 'prima_sorveglianza', 'seconda_sorveglianza',
+    'terza_sorveglianza', 'quarta_sorveglianza', 'follow_up_review',
+    'ricertificazione', 'ricertificazione_30m',
   ] as const),
   tipo_contatto: z.enum(['consulente', 'diretto'] as const),
 

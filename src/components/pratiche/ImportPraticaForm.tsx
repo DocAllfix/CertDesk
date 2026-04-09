@@ -53,7 +53,11 @@ const CICLO_LABELS: Record<CicloType, string> = {
   certificazione:        'Certificazione',
   prima_sorveglianza:    'Prima Sorveglianza',
   seconda_sorveglianza:  'Seconda Sorveglianza',
+  terza_sorveglianza:    'Terza Sorveglianza',
+  quarta_sorveglianza:   'Quarta Sorveglianza',
+  follow_up_review:      'Follow-up Review',
   ricertificazione:      'Ricertificazione',
+  ricertificazione_30m:  'Ricertificazione 30 mesi',
 }
 
 const FASE_LABELS: Record<FaseType, string> = {

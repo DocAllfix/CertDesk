@@ -12,6 +12,31 @@ export type Database = {
   __InternalSupabase: {
     PostgrestVersion: "14.4"
   }
+  graphql_public: {
+    Tables: {
+      [_ in never]: never
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      graphql: {
+        Args: {
+          extensions?: Json
+          operationName?: string
+          query?: string
+          variables?: Json
+        }
+        Returns: Json
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
+  }
   public: {
     Tables: {
       allegati: {
@@ -67,6 +92,61 @@ export type Database = {
             columns: ["pratica_id"]
             isOneToOne: false
             referencedRelation: "pratiche"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      audit_integrati: {
+        Row: {
+          cliente_id: string
+          created_at: string | null
+          created_by: string | null
+          id: string
+          note: string | null
+          numero_audit: string | null
+          updated_at: string | null
+          updated_by: string | null
+        }
+        Insert: {
+          cliente_id: string
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          note?: string | null
+          numero_audit?: string | null
+          updated_at?: string | null
+          updated_by?: string | null
+        }
+        Update: {
+          cliente_id?: string
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          note?: string | null
+          numero_audit?: string | null
+          updated_at?: string | null
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "audit_integrati_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "clienti"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "audit_integrati_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "user_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "audit_integrati_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "user_profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -369,10 +449,64 @@ export type Database = {
           },
         ]
       }
+      notifiche_promemoria_escalation: {
+        Row: {
+          giorni_soglia: number
+          inviata_at: string | null
+          promemoria_id: string
+        }
+        Insert: {
+          giorni_soglia: number
+          inviata_at?: string | null
+          promemoria_id: string
+        }
+        Update: {
+          giorni_soglia?: number
+          inviata_at?: string | null
+          promemoria_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notifiche_promemoria_escalation_promemoria_id_fkey"
+            columns: ["promemoria_id"]
+            isOneToOne: false
+            referencedRelation: "promemoria"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      notifiche_scadenza_inviate: {
+        Row: {
+          giorni_soglia: number
+          inviata_at: string | null
+          pratica_id: string
+        }
+        Insert: {
+          giorni_soglia: number
+          inviata_at?: string | null
+          pratica_id: string
+        }
+        Update: {
+          giorni_soglia?: number
+          inviata_at?: string | null
+          pratica_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notifiche_scadenza_inviate_pratica_id_fkey"
+            columns: ["pratica_id"]
+            isOneToOne: false
+            referencedRelation: "pratiche"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       pratiche: {
         Row: {
           archiviata: boolean | null
           assegnato_a: string | null
+          audit_integrato_id: string | null
+          audit_progressivo: number | null
           auditor_id: string | null
           ciclo: Database["public"]["Enums"]["ciclo_type"]
           cliente_id: string
@@ -414,6 +548,8 @@ export type Database = {
         Insert: {
           archiviata?: boolean | null
           assegnato_a?: string | null
+          audit_integrato_id?: string | null
+          audit_progressivo?: number | null
           auditor_id?: string | null
           ciclo: Database["public"]["Enums"]["ciclo_type"]
           cliente_id: string
@@ -455,6 +591,8 @@ export type Database = {
         Update: {
           archiviata?: boolean | null
           assegnato_a?: string | null
+          audit_integrato_id?: string | null
+          audit_progressivo?: number | null
           auditor_id?: string | null
           ciclo?: Database["public"]["Enums"]["ciclo_type"]
           cliente_id?: string
@@ -499,6 +637,20 @@ export type Database = {
             columns: ["assegnato_a"]
             isOneToOne: false
             referencedRelation: "user_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pratiche_audit_integrato_id_fkey"
+            columns: ["audit_integrato_id"]
+            isOneToOne: false
+            referencedRelation: "audit_integrati"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pratiche_audit_integrato_id_fkey"
+            columns: ["audit_integrato_id"]
+            isOneToOne: false
+            referencedRelation: "vw_audit_integrati"
             referencedColumns: ["id"]
           },
           {
@@ -743,7 +895,48 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      vw_audit_integrati: {
+        Row: {
+          cliente_id: string | null
+          created_at: string | null
+          created_by: string | null
+          ha_archiviate: boolean | null
+          id: string | null
+          is_completato: boolean | null
+          note: string | null
+          numero_audit: string | null
+          pratiche_attive: number | null
+          pratiche_completate: number | null
+          pratiche_totali: number | null
+          prima_scadenza: string | null
+          ultima_scadenza: string | null
+          updated_at: string | null
+          updated_by: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "audit_integrati_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "clienti"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "audit_integrati_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "user_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "audit_integrati_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "user_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       crea_notifica: {
@@ -761,6 +954,8 @@ export type Database = {
         Returns: {
           archiviata: boolean | null
           assegnato_a: string | null
+          audit_integrato_id: string | null
+          audit_progressivo: number | null
           auditor_id: string | null
           ciclo: Database["public"]["Enums"]["ciclo_type"]
           cliente_id: string
@@ -818,6 +1013,10 @@ export type Database = {
         | "prima_sorveglianza"
         | "seconda_sorveglianza"
         | "ricertificazione"
+        | "terza_sorveglianza"
+        | "quarta_sorveglianza"
+        | "follow_up_review"
+        | "ricertificazione_30m"
       contatto_type: "consulente" | "diretto"
       fase_type:
         | "contratto_firmato"
@@ -961,6 +1160,9 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
+  graphql_public: {
+    Enums: {},
+  },
   public: {
     Enums: {
       ciclo_type: [
@@ -968,6 +1170,10 @@ export const Constants = {
         "prima_sorveglianza",
         "seconda_sorveglianza",
         "ricertificazione",
+        "terza_sorveglianza",
+        "quarta_sorveglianza",
+        "follow_up_review",
+        "ricertificazione_30m",
       ],
       contatto_type: ["consulente", "diretto"],
       fase_type: [

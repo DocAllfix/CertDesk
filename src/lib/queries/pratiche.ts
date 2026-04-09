@@ -116,8 +116,7 @@ export async function getPratiche(filtri: FiltriPratiche = {}) {
   if (filtri.assegnato_a)      query = query.eq('assegnato_a', filtri.assegnato_a)
   if (filtri.cliente_id)       query = query.eq('cliente_id', filtri.cliente_id)
   if (filtri.priorita != null) query = query.eq('priorita', filtri.priorita)
-  // audit_integrato_id: colonna aggiunta in migration 020, cast necessario finché database.types.ts non viene rigenerato
-  if (filtri.audit_integrato_id) query = query.eq('audit_integrato_id' as 'id', filtri.audit_integrato_id)
+  if (filtri.audit_integrato_id) query = query.eq('audit_integrato_id', filtri.audit_integrato_id)
   if (filtri.scadenza_max)     query = query.lte('data_scadenza', filtri.scadenza_max)
   if (praticaIds)              query = query.in('id', praticaIds)
 
@@ -139,8 +138,6 @@ export async function getPratiche(filtri: FiltriPratiche = {}) {
 
   const { data, error } = await query
   if (error) throw new Error(`Errore nel caricamento delle pratiche: ${error.message}`)
-  // Cast necessario: audit_integrati non è ancora in database.types.ts,
-  // Supabase inferisce GenericStringError sulla relazione audit.
   return (data ?? []) as unknown as PraticaListItem[]
 }
 

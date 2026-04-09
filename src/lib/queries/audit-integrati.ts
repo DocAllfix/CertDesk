@@ -3,6 +3,7 @@
  * Tutte le funzioni lanciano Error con messaggio in italiano.
  */
 import { supabase } from '@/lib/supabase'
+import type { Tables } from '@/lib/supabase'
 import type {
   AuditIntegratoView,
   AuditIntegratoConPratiche,
@@ -79,11 +80,10 @@ export async function getAuditIntegrato(id: string): Promise<AuditIntegratoConPr
   if (pratError) throw new Error(`Errore nel caricamento delle pratiche dell'audit: ${pratError.message}`)
 
   const praticheList = (pratiche ?? []).map((p) => {
-    const raw = p as Record<string, unknown>
-    const normeRaw = raw.pratiche_norme as { norma_codice: string }[] | null
+    const pRaw = p as unknown as Tables<'pratiche'> & { pratiche_norme: { norma_codice: string }[] | null }
     return {
-      ...p,
-      norme: (normeRaw ?? []).map((pn) => ({ codice: pn.norma_codice, nome: pn.norma_codice })),
+      ...pRaw,
+      norme: (pRaw.pratiche_norme ?? []).map((pn) => ({ codice: pn.norma_codice, nome: pn.norma_codice })),
       audit: { id: audit.id, numero_audit: audit.numero_audit } as AuditIntegratoRef,
     }
   })

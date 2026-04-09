@@ -34,6 +34,7 @@ import type {
   FaseType, CicloType, StatoPraticaType,
   FiltriPratiche, PraticaListItem,
   PraticaConRelazioni, Cliente, Consulente, UserProfile,
+  AuditIntegratoRef,
 } from '@/types/app.types'
 import type { Tables } from '@/lib/supabase'
 
@@ -76,6 +77,7 @@ type PraticaListRaw = Tables<'pratiche'> & {
   consulente:     Pick<Consulente, 'id' | 'nome' | 'cognome'> | null
   assegnato:      Pick<UserProfile, 'id' | 'nome' | 'cognome' | 'avatar_url'> | null
   pratiche_norme: { norma_codice: string }[]
+  audit:          AuditIntegratoRef | null
 }
 
 // ── Sort client-side ─────────────────────────────────────────────
@@ -166,6 +168,7 @@ function toListItem(raw: PraticaListRaw): PraticaListItem {
       codice: pn.norma_codice,
       nome:   pn.norma_codice,
     })),
+    audit: raw.audit ?? null,
   }
 }
 
