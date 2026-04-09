@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -11,6 +11,11 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { cn } from '@/lib/utils'
+
+// ── Rate limiting client-side ───────────────────────────────────
+const MAX_TENTATIVI = 5
+const FINESTRA_MINUTI = 15
+const BLOCCO_SECONDI = 60
 
 // ── Schema di validazione ────────────────────────────────────────
 
@@ -47,6 +52,46 @@ export default function LoginPage() {
   const { user } = useAuth()
   const [errorLogin, setErrorLogin] = useState<string | null>(null)
 
+  // ── Rate limiting state ─────────────────────────────────────────
+  const tentativiFalliti = useRef<number[]>([]) // timestamps dei tentativi falliti
+  const [bloccatoFino, setBloccatoFino] = useState<number | null>(null)
+  const [secondiRimanenti, setSecondiRimanenti] = useState(0)
+
+  // Countdown timer quando il login è bloccato
+  useEffect(() => {
+    if (!bloccatoFino) return
+    const tick = () => {
+      const rimanenti = Math.ceil((bloccatoFino - Date.now()) / 1000)
+      if (rimanenti <= 0) {
+        setBloccatoFino(null)
+        setSecondiRimanenti(0)
+        setErrorLogin(null)
+      } else {
+        setSecondiRimanenti(rimanenti)
+      }
+    }
+    tick()
+    const id = setInterval(tick, 1000)
+    return () => clearInterval(id)
+  }, [bloccatoFino])
+
+  // Registra un tentativo fallito e blocca se necessario
+  const registraTentativoFallito = useCallback(() => {
+    const ora = Date.now()
+    const limiteFinestra = ora - FINESTRA_MINUTI * 60 * 1000
+    // Mantieni solo i tentativi nella finestra temporale
+    tentativiFalliti.current = tentativiFalliti.current.filter(t => t > limiteFinestra)
+    tentativiFalliti.current.push(ora)
+
+    if (tentativiFalliti.current.length >= MAX_TENTATIVI) {
+      const scadenzaBlocco = ora + BLOCCO_SECONDI * 1000
+      setBloccatoFino(scadenzaBlocco)
+      tentativiFalliti.current = [] // reset dopo blocco
+    }
+  }, [])
+
+  const isBloccato = bloccatoFino !== null && Date.now() < bloccatoFino
+
   // Fix race condition: naviga quando user viene impostato da AuthProvider.
   // Gestisce anche il redirect automatico se l'utente è già autenticato.
   useEffect(() => {
@@ -64,6 +109,7 @@ export default function LoginPage() {
   })
 
   const onSubmit = async (data: LoginFormData) => {
+    if (isBloccato) return
     setErrorLogin(null)
 
     const { error } = await supabase.auth.signInWithPassword({
@@ -72,6 +118,7 @@ export default function LoginPage() {
     })
 
     if (error) {
+      registraTentativoFallito()
       setErrorLogin(mapErroreLogin(error.message))
     }
     // Navigazione gestita da useEffect quando AuthProvider aggiorna user
@@ -110,12 +157,18 @@ export default function LoginPage() {
           {/* Form */}
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-5" noValidate>
 
-            {/* Errore login globale */}
-            {errorLogin && (
+            {/* Errore login globale o blocco rate limit */}
+            {isBloccato ? (
+              <div className="rounded-lg bg-destructive/10 border border-destructive/20 px-4 py-3">
+                <p className="text-sm text-destructive font-medium">
+                  Troppi tentativi. Riprova tra {secondiRimanenti} second{secondiRimanenti === 1 ? 'o' : 'i'}.
+                </p>
+              </div>
+            ) : errorLogin ? (
               <div className="rounded-lg bg-destructive/10 border border-destructive/20 px-4 py-3">
                 <p className="text-sm text-destructive font-medium">{errorLogin}</p>
               </div>
-            )}
+            ) : null}
 
             {/* Email */}
             <div className="space-y-1.5">
@@ -164,13 +217,15 @@ export default function LoginPage() {
             <Button
               type="submit"
               className="w-full"
-              disabled={isSubmitting}
+              disabled={isSubmitting || isBloccato}
             >
               {isSubmitting ? (
                 <>
                   <Loader2 className="size-4 animate-spin" />
                   Accesso in corso...
                 </>
+              ) : isBloccato ? (
+                `Bloccato (${secondiRimanenti}s)`
               ) : (
                 'Accedi'
               )}
