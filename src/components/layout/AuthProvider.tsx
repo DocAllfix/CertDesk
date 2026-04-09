@@ -6,6 +6,7 @@ import {
   useCallback,
   type ReactNode,
 } from 'react'
+import * as Sentry from '@sentry/react'
 import type { User } from '@supabase/supabase-js'
 import { supabase } from '@/lib/supabase'
 import type { UserProfile, UserRole } from '@/types/app.types'
@@ -81,6 +82,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
     setUserProfile(data)
     setErrorAccount(null)
+
+    // Sentry: identifica utente autenticato (solo id + email, minimizzazione dati)
+    Sentry.setUser({ id: authUser.id, email: authUser.email })
   }, [])
 
   useEffect(() => {
@@ -106,6 +110,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
           setUserProfile(null)
           setErrorAccount(null)
           setIsLoading(false)
+          Sentry.setUser(null)
           return
         }
 
