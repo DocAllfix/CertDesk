@@ -92,6 +92,8 @@ export interface AuditIntegratoView extends AuditIntegrato {
   prima_scadenza: string | null
   ultima_scadenza: string | null
   ha_archiviate: boolean
+  /** Popolato client-side da join con tabella clienti */
+  cliente?: Pick<Cliente, 'id' | 'nome' | 'ragione_sociale'> | null
 }
 
 /** Input per il wizard di creazione audit integrato */
@@ -105,6 +107,12 @@ export interface CreaAuditIntegratoInput {
   referente_tel?: string | null
   note?: string | null
   pratiche: CreaAuditPraticaInput[]
+  /** Dati import — se presenti, le pratiche vengono create con fase/date personalizzati */
+  importData?: {
+    fase: FaseType
+    created_at?: string | null
+    completata_at?: string | null
+  }
 }
 
 /** Dati per singola pratica dentro il wizard audit */
@@ -197,6 +205,8 @@ export interface FiltriPratiche {
   scadenza_max?: string | null
   /** Shortcut: filtra solo pratiche con stato = 'attiva' (ha precedenza su stato) */
   solo_attive?: boolean
+  /** Esclude pratiche con fase = 'completata' (per dashboard/scadenze) */
+  escludi_completate?: boolean
   /** Ordinamento */
   ordinamento?: OrdinamentoPratiche
   /** Direzione ordinamento */

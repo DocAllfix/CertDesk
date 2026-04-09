@@ -3,7 +3,7 @@
  * Tutte le funzioni lanciano Error con messaggio in italiano.
  */
 import { supabase } from '@/lib/supabase'
-import type { Tables } from '@/lib/supabase'
+import type { Tables, Inserts } from '@/lib/supabase'
 import type {
   AuditIntegratoView,
   AuditIntegratoConPratiche,
@@ -44,7 +44,24 @@ export async function getAuditIntegrati(filtri?: {
 
   const { data, error } = await query
   if (error) throw new Error(`Errore nel caricamento degli audit integrati: ${error.message}`)
-  return (data ?? []) as unknown as AuditIntegratoView[]
+
+  const audits = (data ?? []) as unknown as AuditIntegratoView[]
+  if (audits.length === 0) return audits
+
+  // Join client-side con clienti per nome/ragione_sociale
+  const clienteIds = [...new Set(audits.map(a => a.cliente_id).filter(Boolean))]
+  if (clienteIds.length > 0) {
+    const { data: clienti } = await supabase
+      .from('clienti')
+      .select('id, nome, ragione_sociale')
+      .in('id', clienteIds)
+    const clientiMap = new Map((clienti ?? []).map(c => [c.id, c]))
+    for (const audit of audits) {
+      audit.cliente = clientiMap.get(audit.cliente_id) ?? null
+    }
+  }
+
+  return audits
 }
 
 /**
@@ -142,28 +159,44 @@ export async function createAuditIntegrato(input: CreaAuditIntegratoInput) {
   if (!audit) throw new Error('Creazione audit integrato fallita: nessun dato restituito')
 
   // 2. Crea pratiche figlie con progressivo 1..N
+  const imp = input.importData
+  const isImportCompletata = imp?.fase === 'completata'
   const praticheCreate = []
   for (let i = 0; i < input.pratiche.length; i++) {
     const p = input.pratiche[i]
+
+    // Campi base
+    const insertData: Inserts<'pratiche'> = {
+      cliente_id: input.cliente_id,
+      ciclo: input.ciclo,
+      tipo_contatto: input.tipo_contatto,
+      consulente_id: input.consulente_id ?? null,
+      referente_nome: input.referente_nome ?? null,
+      referente_email: input.referente_email ?? null,
+      referente_tel: input.referente_tel ?? null,
+      assegnato_a: p.assegnato_a ?? null,
+      auditor_id: p.auditor_id ?? null,
+      data_verifica: p.data_verifica ?? null,
+      data_scadenza: p.data_scadenza ?? null,
+      sede_verifica: p.sede_verifica ?? null,
+      audit_integrato_id: audit.id,
+      audit_progressivo: i + 1,
+      created_by: user.id,
+      // Import mode: fase, date, flag completata
+      ...(imp ? {
+        fase: imp.fase,
+        ...(imp.created_at ? { created_at: imp.created_at } : {}),
+        ...(isImportCompletata && imp.completata_at ? {
+          completata_at: imp.completata_at,
+          completata: true,
+          sorveglianza_reminder_creato: true,
+        } : {}),
+      } : {}),
+    }
+
     const { data: pratica, error: pError } = await supabase
       .from('pratiche')
-      .insert({
-        cliente_id: input.cliente_id,
-        ciclo: input.ciclo,
-        tipo_contatto: input.tipo_contatto,
-        consulente_id: input.consulente_id ?? null,
-        referente_nome: input.referente_nome ?? null,
-        referente_email: input.referente_email ?? null,
-        referente_tel: input.referente_tel ?? null,
-        assegnato_a: p.assegnato_a ?? null,
-        auditor_id: p.auditor_id ?? null,
-        data_verifica: p.data_verifica ?? null,
-        data_scadenza: p.data_scadenza ?? null,
-        sede_verifica: p.sede_verifica ?? null,
-        audit_integrato_id: audit.id,
-        audit_progressivo: i + 1,
-        created_by: user.id,
-      })
+      .insert(insertData)
       .select()
       .single()
 
@@ -183,6 +216,28 @@ export async function createAuditIntegrato(input: CreaAuditIntegratoInput) {
       throw new Error(
         `Pratica #${i + 1} creata ma errore nel salvataggio della norma: ${normaError.message}`
       )
+    }
+
+    // 4. Import completata: promemoria sorveglianza + data_prossima_sorveglianza
+    if (isImportCompletata && imp.completata_at && pratica) {
+      const giorni = 365 // SA 8000 è esclusa dagli audit integrati
+      const base = new Date(imp.completata_at)
+      base.setDate(base.getDate() + giorni)
+      const dataScadenzaProm = base.toISOString().split('T')[0]
+      const promCreator = (pratica as Record<string, unknown>).assegnato_a as string ?? user.id
+
+      await supabase.from('promemoria').insert({
+        pratica_id: pratica.id,
+        creato_da: promCreator,
+        assegnato_a: promCreator,
+        testo: `Sorveglianza ${p.norma_codice} per pratica ${(pratica as Record<string, unknown>).numero_pratica ?? 'importata'} — verificare scadenza ciclo certificativo`,
+        data_scadenza: dataScadenzaProm,
+      })
+
+      await supabase
+        .from('pratiche')
+        .update({ data_prossima_sorveglianza: dataScadenzaProm })
+        .eq('id', pratica.id)
     }
 
     praticheCreate.push(pratica)

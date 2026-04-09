@@ -243,6 +243,7 @@ export default function PratichePage() {
   const prefetchPratica = usePrefetchPratica()
 
   const isResponsabile = userProfile?.ruolo === 'responsabile'
+  const isOperatore    = userProfile?.ruolo === 'operatore'
   const puoFiltareAssegnato = isAdmin || isResponsabile
 
   // ── State locale: modal nuova pratica / modifica ──────────────
@@ -417,14 +418,16 @@ export default function PratichePage() {
 
       {/* Toolbar: stile monday.com / Evalisdesk */}
       <div className="flex items-center gap-2 mb-4 flex-wrap">
-        {/* Nuova Pratica */}
-        <Button
-          className="bg-primary hover:bg-primary/90 text-primary-foreground h-8 px-4 text-sm font-medium rounded-md"
-          onClick={() => setNuovaOpen(true)}
-        >
-          <Plus className="w-3.5 h-3.5 mr-1.5" />
-          Nuova Pratica
-        </Button>
+        {/* Nuova Pratica — nascosta agli operatori (RLS impedisce l'insert) */}
+        {!isOperatore && (
+          <Button
+            className="bg-primary hover:bg-primary/90 text-primary-foreground h-8 px-4 text-sm font-medium rounded-md"
+            onClick={() => setNuovaOpen(true)}
+          >
+            <Plus className="w-3.5 h-3.5 mr-1.5" />
+            Nuova Pratica
+          </Button>
+        )}
 
         {/* Importa pratica (solo admin/responsabile) */}
         {(isAdmin || isResponsabile) && (
@@ -659,13 +662,19 @@ export default function PratichePage() {
           <div className="py-16 text-center">
             <p className="text-sm text-muted-foreground">Nessuna pratica trovata</p>
             <p className="text-xs text-muted-foreground/60 mt-1">
-              Prova a cambiare i filtri attivi o{' '}
-              <button
-                className="text-primary underline-offset-2 hover:underline"
-                onClick={() => setNuovaOpen(true)}
-              >
-                crea una nuova pratica
-              </button>
+              {isOperatore ? (
+                'Prova a cambiare i filtri attivi'
+              ) : (
+                <>
+                  Prova a cambiare i filtri attivi o{' '}
+                  <button
+                    className="text-primary underline-offset-2 hover:underline"
+                    onClick={() => setNuovaOpen(true)}
+                  >
+                    crea una nuova pratica
+                  </button>
+                </>
+              )}
             </p>
           </div>
         )}

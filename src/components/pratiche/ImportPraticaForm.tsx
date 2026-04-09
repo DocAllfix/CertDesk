@@ -15,7 +15,7 @@
 import { useEffect, useState, useRef, useMemo } from 'react'
 import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { AlertTriangle, Info } from 'lucide-react'
+import { AlertTriangle, Info, Sparkles } from 'lucide-react'
 
 import { Button }   from '@/components/ui/button'
 import { Input }    from '@/components/ui/input'
@@ -27,6 +27,7 @@ import {
 import { NormeMultiSelect } from '@/components/shared/NormeMultiSelect'
 import { QuickAddCliente }    from '@/components/clienti/QuickAddCliente'
 import { QuickAddConsulente } from '@/components/consulenti/QuickAddConsulente'
+import { AuditIntegratoWizard } from '@/components/audit/AuditIntegratoWizard'
 
 import { useClienti }     from '@/hooks/useClienti'
 import { useConsulenti }  from '@/hooks/useConsulenti'
@@ -120,6 +121,9 @@ export function ImportPraticaForm({ onSuccess, onCancel }: ImportPraticaFormProp
   const createPratica = useCreatePratica()
   const isPending     = createPratica.isPending
   const mutationError = createPratica.error as Error | null
+
+  // Wizard audit integrato — si apre quando l'utente seleziona 2+ norme
+  const [wizardOpen, setWizardOpen] = useState(false)
 
   // ── Form ───────────────────────────────────────────────────────
 
@@ -324,6 +328,7 @@ export function ImportPraticaForm({ onSuccess, onCancel }: ImportPraticaFormProp
   // ── Render ──────────────────────────────────────────────────────
 
   return (
+    <>
     <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col flex-1 min-h-0 overflow-hidden">
 
       {/* Corpo scrollabile */}
@@ -420,6 +425,24 @@ export function ImportPraticaForm({ onSuccess, onCancel }: ImportPraticaFormProp
               />
               {errors.norme && (
                 <p className="text-xs text-destructive mt-1">{errors.norme.message}</p>
+              )}
+
+              {/* Banner auto-switch a wizard audit integrato (2+ norme senza SA 8000) */}
+              {(normeSelezionate?.length ?? 0) > 1 && !normeSelezionate?.every(n => n === 'SA 8000') && (
+                <div className="flex items-center justify-between bg-secondary/10 border border-secondary/30 rounded-lg px-3 py-2.5 mt-2">
+                  <div className="flex items-center gap-2 text-xs text-secondary font-semibold">
+                    <Sparkles className="w-3.5 h-3.5 shrink-0" />
+                    {normeSelezionate!.filter(n => n !== 'SA 8000').length} norme — Audit Integrato
+                  </div>
+                  <Button
+                    type="button"
+                    size="sm"
+                    className="h-7 px-3 text-xs bg-secondary hover:bg-secondary/90 text-secondary-foreground"
+                    onClick={() => setWizardOpen(true)}
+                  >
+                    Apri wizard
+                  </Button>
+                </div>
               )}
             </div>
             <div>
@@ -765,5 +788,24 @@ export function ImportPraticaForm({ onSuccess, onCancel }: ImportPraticaFormProp
       </div>
 
     </form>
+
+    {/* Wizard Audit Integrato — si apre dal banner norme */}
+    <AuditIntegratoWizard
+      open={wizardOpen}
+      onClose={() => { setWizardOpen(false); onSuccess() }}
+      prefill={{
+        cliente_id: watch('cliente_id'),
+        ciclo: watch('ciclo') as CicloType,
+        norme: normeSelezionate,
+        tipo_contatto: watch('tipo_contatto'),
+        consulente_id: watch('consulente_id'),
+      }}
+      importData={{
+        fase: importFase,
+        created_at: watch('import_created_at') ?? null,
+        completata_at: watch('import_completata_at') ?? null,
+      }}
+    />
+    </>
   )
 }

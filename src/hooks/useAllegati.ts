@@ -47,7 +47,8 @@ export function useAllegatiPratica(praticaId: string | undefined) {
   })
 }
 
-/** Mutation per caricare un allegato. Invalida la lista allegati al successo. */
+/** Mutation per caricare un allegato. Invalida la lista allegati al successo.
+ *  Dopo l'upload, notifica l'assegnato_a della pratica (se diverso dall'utente corrente). */
 export function useUploadAllegato(praticaId: string) {
   const queryClient = useQueryClient()
   const { userProfile } = useAuth()
@@ -55,8 +56,29 @@ export function useUploadAllegato(praticaId: string) {
   return useMutation({
     mutationFn: (params: Omit<UploadAllegatoParams, 'praticaId' | 'caricatoDa'>) =>
       uploadAllegato({ ...params, praticaId, caricatoDa: userProfile?.id ?? null }),
-    onSuccess: () => {
+    onSuccess: async () => {
       queryClient.invalidateQueries({ queryKey: allegatiKeys.pratica(praticaId) })
+
+      // Notifica all'assegnato_a della pratica (se diverso dall'utente corrente)
+      if (!userProfile?.id) return
+      const { data: pratica } = await supabase
+        .from('pratiche')
+        .select('assegnato_a, numero_pratica')
+        .eq('id', praticaId)
+        .maybeSingle()
+
+      if (!pratica?.assegnato_a || pratica.assegnato_a === userProfile.id) return
+
+      const nomeUploader = [userProfile.nome, userProfile.cognome].filter(Boolean).join(' ')
+      const numero = pratica.numero_pratica ?? ''
+
+      await supabase.rpc('crea_notifica', {
+        p_destinatario_id: pratica.assegnato_a,
+        p_pratica_id:      praticaId,
+        p_tipo:            'info',
+        p_titolo:          `Nuovo allegato per pratica ${numero}`,
+        p_messaggio:       `${nomeUploader} ha aggiunto un allegato alla pratica ${numero}`,
+      })
     },
   })
 }

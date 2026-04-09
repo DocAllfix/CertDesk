@@ -48,7 +48,7 @@ import {
   getUtentiConNorme,
 } from '@/lib/queries/userProfiles'
 
-import type { CicloType, ContattoType, CreaAuditPraticaInput } from '@/types/app.types'
+import type { CicloType, ContattoType, FaseType, CreaAuditPraticaInput } from '@/types/app.types'
 
 interface AuditIntegratoWizardProps {
   open: boolean
@@ -61,6 +61,12 @@ interface AuditIntegratoWizardProps {
     tipo_contatto?: ContattoType
     consulente_id?: string | null
   }
+  /** Dati import — se presenti, le pratiche vengono create con fase/date personalizzati */
+  importData?: {
+    fase: FaseType
+    created_at?: string | null
+    completata_at?: string | null
+  }
 }
 
 const CICLI: { value: CicloType; label: string }[] = [
@@ -70,7 +76,7 @@ const CICLI: { value: CicloType; label: string }[] = [
   { value: 'ricertificazione',      label: 'Ricertificazione' },
 ]
 
-export function AuditIntegratoWizard({ open, onClose, prefill }: AuditIntegratoWizardProps) {
+export function AuditIntegratoWizard({ open, onClose, prefill, importData }: AuditIntegratoWizardProps) {
   const [step, setStep] = useState(0)
 
   // ── Step 1 — dati comuni ──────────────────────────────────────
@@ -177,13 +183,27 @@ export function AuditIntegratoWizard({ open, onClose, prefill }: AuditIntegratoW
     !norme.includes('SA 8000') &&
     (tipoContatto === 'consulente' ? !!consulenteId : !!referenteNome.trim())
 
+  // Se import completata, la scadenza viene calcolata automaticamente — non serve input manuale
+  const isImportCompletata = importData?.fase === 'completata' && !!importData.completata_at
   const step2Valid =
     praticheData.length === norme.length &&
-    praticheData.every(p => !!p.data_scadenza)
+    (isImportCompletata || praticheData.every(p => !!p.data_scadenza))
 
   const handleSubmit = async () => {
     try {
       const isConsulente = tipoContatto === 'consulente'
+      // Se import completata, pre-calcola scadenza per ogni pratica (completata_at + 365gg)
+      let praticheFinali = praticheData
+      if (importData?.fase === 'completata' && importData.completata_at) {
+        const base = new Date(importData.completata_at)
+        base.setDate(base.getDate() + 365) // SA 8000 è esclusa dagli audit integrati
+        const scadenza = base.toISOString().split('T')[0]
+        praticheFinali = praticheData.map(p => ({
+          ...p,
+          data_scadenza: p.data_scadenza ?? scadenza,
+        }))
+      }
+
       await createAudit.mutateAsync({
         cliente_id: clienteId,
         ciclo,
@@ -193,7 +213,8 @@ export function AuditIntegratoWizard({ open, onClose, prefill }: AuditIntegratoW
         referente_email: isConsulente ? null : (referenteEmail.trim() || null),
         referente_tel:   isConsulente ? null : (referenteTel.trim() || null),
         note: note.trim() || null,
-        pratiche: praticheData,
+        pratiche: praticheFinali,
+        importData,
       })
       onClose()
     } catch {

@@ -111,6 +111,7 @@ export async function getPratiche(filtri: FiltriPratiche = {}) {
     query = query.eq('stato', filtri.stato)
   }
 
+  if (filtri.escludi_completate) query = query.neq('fase', 'completata')
   if (filtri.fase)             query = query.eq('fase', filtri.fase)
   if (filtri.ciclo)            query = query.eq('ciclo', filtri.ciclo)
   if (filtri.assegnato_a)      query = query.eq('assegnato_a', filtri.assegnato_a)

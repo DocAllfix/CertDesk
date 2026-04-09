@@ -192,6 +192,7 @@ export default function DashboardPage() {
   // Pratiche attive ordinate per scadenza — usate per scadenze urgenti + le mie
   const { data: rawPratiche = [] } = usePratiche({
     solo_attive: true,
+    escludi_completate: true,
     ordinamento: 'data_scadenza',
     direzione:   'asc',
   })

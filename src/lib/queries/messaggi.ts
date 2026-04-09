@@ -83,22 +83,31 @@ export async function createMessaggio(params: CreateMessaggioParams): Promise<vo
   // Notifiche automatiche — errori non bloccanti (log console)
   const testoBreve = testo.length > 100 ? `${testo.slice(0, 100)}…` : testo
 
+  // Recupera numero_pratica per arricchire il titolo della notifica
+  const { data: praticaInfo } = await supabase
+    .from('pratiche')
+    .select('numero_pratica')
+    .eq('id', praticaId)
+    .maybeSingle()
+  const numeroPratica = praticaInfo?.numero_pratica ?? ''
+  const suffissoPratica = numeroPratica ? ` per pratica ${numeroPratica}` : ''
+
   if ((tipo === 'richiesta' || tipo === 'commento') && destinatarioId) {
     // Notifica al destinatario esplicito
     const tipoNotifica = tipo === 'richiesta' ? 'richiesta' : 'info'
-    const titoloNotifica = tipo === 'richiesta' ? 'Nuova richiesta' : 'Nuovo commento'
+    const titoloBase = tipo === 'richiesta' ? 'Nuova Richiesta' : 'Nuovo Commento'
     await supabase.rpc('crea_notifica', {
       p_destinatario_id: destinatarioId,
       p_pratica_id:      praticaId,
       p_tipo:            tipoNotifica,
-      p_titolo:          titoloNotifica,
+      p_titolo:          `${titoloBase}${suffissoPratica}`,
       p_messaggio:       testoBreve,
     })
 
   } else if ((tipo === 'richiesta' || tipo === 'commento') && !destinatarioId) {
     // Broadcast: notifica a tutti gli utenti attivi tranne l'autore
-    const titoloNotifica = tipo === 'richiesta' ? 'Nuova richiesta' : 'Nuovo commento'
-    const tipoNotifica   = tipo === 'richiesta' ? 'richiesta' : 'info'
+    const titoloBase = tipo === 'richiesta' ? 'Nuova Richiesta' : 'Nuovo Commento'
+    const tipoNotifica = tipo === 'richiesta' ? 'richiesta' : 'info'
 
     const { data: utenti, error: utentiError } = await supabase
       .from('user_profiles')
@@ -112,7 +121,7 @@ export async function createMessaggio(params: CreateMessaggioParams): Promise<vo
           p_destinatario_id: u.id,
           p_pratica_id:      praticaId,
           p_tipo:            tipoNotifica,
-          p_titolo:          titoloNotifica,
+          p_titolo:          `${titoloBase}${suffissoPratica}`,
           p_messaggio:       testoBreve,
         })
       }
@@ -124,7 +133,7 @@ export async function createMessaggio(params: CreateMessaggioParams): Promise<vo
       p_destinatario_id: destinatarioId,
       p_pratica_id:      praticaId,
       p_tipo:            'info',
-      p_titolo:          'Nuova risposta',
+      p_titolo:          `Nuova Risposta${suffissoPratica}`,
       p_messaggio:       testoBreve,
     })
   }
@@ -154,11 +163,12 @@ export async function markMessaggioLetto(messaggioId: string, userId: string): P
 
 // ── Team members per select destinatario ──────────────────────────
 
-export async function getTeamMembers(): Promise<Pick<UserProfile, 'id' | 'nome' | 'cognome'>[]> {
+export async function getTeamMembers(): Promise<Pick<UserProfile, 'id' | 'nome' | 'cognome' | 'ruolo'>[]> {
   const { data, error } = await supabase
     .from('user_profiles')
-    .select('id, nome, cognome')
+    .select('id, nome, cognome, ruolo')
     .eq('attivo', true)
+    .neq('ruolo', 'admin')
     .order('cognome', { ascending: true })
 
   if (error) throw new Error(`Errore nel caricamento del team: ${error.message}`)

@@ -37,6 +37,13 @@ function AuditRow({ audit }: { audit: AuditIntegratoView }) {
         </div>
       </td>
 
+      {/* Cliente */}
+      <td className="px-4 py-3">
+        <span className="text-sm text-foreground">
+          {audit.cliente?.ragione_sociale ?? audit.cliente?.nome ?? '—'}
+        </span>
+      </td>
+
       {/* Pratiche */}
       <td className="px-4 py-3">
         <div className="flex items-center gap-2">
@@ -102,11 +109,18 @@ export default function AuditIntegratiPage() {
   const [tab, setTab]               = useState<'attivi' | 'completati'>('attivi')
   const [wizardOpen, setWizardOpen] = useState(false)
 
-  // Carico SEMPRE tutti gli audit (no filtro server) per poter mostrare
-  // i conteggi corretti su entrambi i tab. Il filtro tab è client-side.
-  const { data: auditRaw = [], isLoading, error } = useAuditIntegrati({
-    ricerca: ricerca || null,
-  })
+  // Carico SEMPRE tutti gli audit per conteggi tab + ricerca client-side
+  const { data: auditAll = [], isLoading, error } = useAuditIntegrati()
+
+  // Filtro ricerca client-side: numero_audit O nome/ragione_sociale cliente
+  const searchLower = ricerca.trim().toLowerCase()
+  const auditRaw = searchLower
+    ? auditAll.filter(a => {
+        const numero = (a.numero_audit ?? '').toLowerCase()
+        const cliente = (a.cliente?.ragione_sociale ?? a.cliente?.nome ?? '').toLowerCase()
+        return numero.includes(searchLower) || cliente.includes(searchLower)
+      })
+    : auditAll
 
   // Conteggio per tab
   const countAttivi     = auditRaw.filter(a => !a.is_completato).length
@@ -146,7 +160,7 @@ export default function AuditIntegratiPage() {
           <div className="relative flex-1 min-w-[200px]">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
-              placeholder="Cerca per numero audit..."
+              placeholder="Cerca per numero audit o cliente..."
               value={ricerca}
               onChange={(e) => setRicerca(e.target.value)}
               className="pl-9 h-9"
@@ -205,6 +219,7 @@ export default function AuditIntegratiPage() {
               <thead>
                 <tr className="border-b border-border bg-muted/20">
                   <th className="text-left text-xs font-medium text-muted-foreground px-4 py-2.5">Audit</th>
+                  <th className="text-left text-xs font-medium text-muted-foreground px-4 py-2.5">Cliente</th>
                   <th className="text-left text-xs font-medium text-muted-foreground px-4 py-2.5">Pratiche</th>
                   <th className="text-left text-xs font-medium text-muted-foreground px-4 py-2.5">Attive</th>
                   <th className="text-left text-xs font-medium text-muted-foreground px-4 py-2.5">Prima scadenza</th>

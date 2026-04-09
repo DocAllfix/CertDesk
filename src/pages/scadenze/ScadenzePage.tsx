@@ -165,7 +165,15 @@ function RigaScadenza({ pratica }: RigaScadenzaProps) {
   }
 
   return (
-    <tr className="border-b border-border/50 last:border-0 hover:bg-muted/30 transition-colors">
+    <tr
+      onClick={(e) => {
+        // Non navigare se il click è su un elemento interattivo (checklist, Avanza, link, input)
+        const target = e.target as HTMLElement
+        if (target.closest('button, a, input, [role="button"], [role="checkbox"]')) return
+        navigate(`/pratiche/${pratica.id}`)
+      }}
+      className="border-b border-border/50 last:border-0 hover:bg-muted/30 transition-colors cursor-pointer"
+    >
       {/* Urgenza */}
       <td className="px-4 py-3 w-24">
         <BadgeUrgenza dataScadenza={pratica.data_scadenza} />
@@ -279,6 +287,7 @@ export default function ScadenzePage() {
 
   const { data: rawData = [], isLoading, error } = usePratiche({
     solo_attive:  true,
+    escludi_completate: true,
     ordinamento:  'data_scadenza',
     direzione:    'asc',
   })
