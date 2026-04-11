@@ -1,0 +1,137 @@
+# ═══════════════════════════════════════════════════════════════
+# Deploy to Production — EvalisDesk
+# ═══════════════════════════════════════════════════════════════
+# Trigger: SOLO manuale (Run workflow) — nessun deploy accidentale
+# Processo: build → tar → scp → symlink swap atomico → nginx reload
+# ═══════════════════════════════════════════════════════════════
+
+name: Deploy to Production
+
+on:
+  workflow_dispatch:
+    inputs:
+      skip_migration:
+        description: 'Skip Supabase migration (solo frontend)'
+        required: false
+        default: 'false'
+        type: choice
+        options:
+          - 'false'
+          - 'true'
+
+env:
+  VPS_PATH: /var/www/certdesk
+  KEEP_RELEASES: 5
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      # ── Checkout ──────────────────────────────────────────────
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # ── Setup Node ────────────────────────────────────────────
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: certdesk/package-lock.json
+
+      # ── Install dependencies ──────────────────────────────────
+      - name: Install dependencies
+        working-directory: certdesk
+        run: npm ci
+
+      # ── Write .env.production from secrets ────────────────────
+      - name: Write .env.production
+        working-directory: certdesk
+        run: |
+          cat > .env.production << 'ENVEOF'
+          VITE_APP_NAME=${{ secrets.VITE_APP_NAME }}
+          VITE_CLIENTE_NAME=${{ secrets.VITE_CLIENTE_NAME }}
+          VITE_LOGO_URL=${{ secrets.VITE_LOGO_URL }}
+          VITE_FAVICON_URL=${{ secrets.VITE_FAVICON_URL }}
+          VITE_PRIMARY_COLOR=${{ secrets.VITE_PRIMARY_COLOR }}
+          VITE_ACCENT_COLOR=${{ secrets.VITE_ACCENT_COLOR }}
+          VITE_NORME_ABILITATE=${{ secrets.VITE_NORME_ABILITATE }}
+          VITE_SUPABASE_URL=${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY=${{ secrets.VITE_SUPABASE_ANON_KEY }}
+          VITE_SENTRY_DSN=${{ secrets.VITE_SENTRY_DSN }}
+          ENVEOF
+
+      # ── Build ─────────────────────────────────────────────────
+      - name: Build production bundle
+        working-directory: certdesk
+        run: npm run build
+
+      # ── Remove source maps ────────────────────────────────────
+      - name: Remove source maps
+        run: find certdesk/dist -name '*.map' -delete
+
+      # ── Supabase Migration (opzionale) ────────────────────────
+      - name: Apply Supabase migration
+        if: inputs.skip_migration == 'false' && secrets.SUPABASE_DB_URL_PROD != ''
+        working-directory: certdesk
+        run: |
+          npx supabase db push --db-url "${{ secrets.SUPABASE_DB_URL_PROD }}"
+
+      # ── Setup SSH ─────────────────────────────────────────────
+      - name: Setup SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.VPS_SSH_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H ${{ secrets.VPS_HOST }} >> ~/.ssh/known_hosts 2>/dev/null
+
+      # ── Deploy to VPS ─────────────────────────────────────────
+      - name: Deploy to VPS (atomic swap)
+        env:
+          SSH_TARGET: ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}
+          SSH_KEY: ~/.ssh/deploy_key
+        run: |
+          RELEASE_NAME="$(date -u +%Y%m%d-%H%M%S)"
+          echo "📦 Release: $RELEASE_NAME"
+
+          # Crea archivio
+          tar czf /tmp/release.tar.gz -C certdesk/dist .
+
+          # Crea directory release sul VPS
+          ssh -i $SSH_KEY $SSH_TARGET "mkdir -p ${{ env.VPS_PATH }}/releases/$RELEASE_NAME"
+
+          # Upload + estrai
+          scp -i $SSH_KEY /tmp/release.tar.gz $SSH_TARGET:/tmp/release.tar.gz
+          ssh -i $SSH_KEY $SSH_TARGET "
+            tar xzf /tmp/release.tar.gz -C ${{ env.VPS_PATH }}/releases/$RELEASE_NAME &&
+            rm /tmp/release.tar.gz &&
+            ln -sfn ${{ env.VPS_PATH }}/releases/$RELEASE_NAME ${{ env.VPS_PATH }}/current &&
+            nginx -t && nginx -s reload
+          "
+
+          echo "✅ Deploy completato: $RELEASE_NAME"
+
+      # ── Cleanup vecchie release ───────────────────────────────
+      - name: Cleanup old releases
+        env:
+          SSH_TARGET: ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}
+          SSH_KEY: ~/.ssh/deploy_key
+        run: |
+          ssh -i $SSH_KEY $SSH_TARGET "
+            cd ${{ env.VPS_PATH }}/releases &&
+            ls -1t | tail -n +$((${{ env.KEEP_RELEASES }} + 1)) | xargs -r rm -rf
+          "
+
+      # ── Verifica ──────────────────────────────────────────────
+      - name: Verify deployment
+        run: |
+          sleep 3
+          HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://evalisdesk.duckdns.org)
+          echo "HTTP Status: $HTTP_STATUS"
+          if [ "$HTTP_STATUS" != "200" ]; then
+            echo "⚠️ Il sito ha risposto con $HTTP_STATUS invece di 200"
+            exit 1
+          fi
+          echo "✅ Sito raggiungibile e funzionante"

@@ -1,0 +1,42 @@
+# ═══════════════════════════════════════════════════════════════
+# CI — EvalisDesk
+# ═══════════════════════════════════════════════════════════════
+# Gira ad ogni push su main: type-check + build.
+# Se fallisce, GitHub ti avvisa via email → non deployare.
+# ═══════════════════════════════════════════════════════════════
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: certdesk/package-lock.json
+
+      - name: Install dependencies
+        working-directory: certdesk
+        run: npm ci
+
+      - name: TypeScript check
+        working-directory: certdesk
+        run: npx tsc --noEmit
+
+      - name: Build (dry run)
+        working-directory: certdesk
+        run: npm run build
