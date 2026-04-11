@@ -39,18 +39,16 @@ jobs:
         with:
           node-version: 20
           cache: 'npm'
-          cache-dependency-path: certdesk/package-lock.json
+          cache-dependency-path: package-lock.json
 
       # ── Install dependencies ──────────────────────────────────
       - name: Install dependencies
-        working-directory: certdesk
         run: npm ci
 
       # ── Write .env.production from secrets ────────────────────
       - name: Write .env.production
-        working-directory: certdesk
         run: |
-          cat > .env.production << 'ENVEOF'
+          cat > .env.production << EOF
           VITE_APP_NAME=${{ secrets.VITE_APP_NAME }}
           VITE_CLIENTE_NAME=${{ secrets.VITE_CLIENTE_NAME }}
           VITE_LOGO_URL=${{ secrets.VITE_LOGO_URL }}
@@ -61,23 +59,27 @@ jobs:
           VITE_SUPABASE_URL=${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY=${{ secrets.VITE_SUPABASE_ANON_KEY }}
           VITE_SENTRY_DSN=${{ secrets.VITE_SENTRY_DSN }}
-          ENVEOF
+          EOF
 
       # ── Build ─────────────────────────────────────────────────
       - name: Build production bundle
-        working-directory: certdesk
         run: npm run build
 
       # ── Remove source maps ────────────────────────────────────
       - name: Remove source maps
-        run: find certdesk/dist -name '*.map' -delete
+        run: find dist -name '*.map' -delete
 
       # ── Supabase Migration (opzionale) ────────────────────────
       - name: Apply Supabase migration
-        if: inputs.skip_migration == 'false' && secrets.SUPABASE_DB_URL_PROD != ''
-        working-directory: certdesk
+        if: inputs.skip_migration == 'false'
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL_PROD }}
         run: |
-          npx supabase db push --db-url "${{ secrets.SUPABASE_DB_URL_PROD }}"
+          if [ -n "$SUPABASE_DB_URL" ]; then
+            npx supabase db push --db-url "$SUPABASE_DB_URL"
+          else
+            echo "⚠️ SUPABASE_DB_URL_PROD non configurato, skip migration"
+          fi
 
       # ── Setup SSH ─────────────────────────────────────────────
       - name: Setup SSH key
@@ -97,7 +99,7 @@ jobs:
           echo "📦 Release: $RELEASE_NAME"
 
           # Crea archivio
-          tar czf /tmp/release.tar.gz -C certdesk/dist .
+          tar czf /tmp/release.tar.gz -C dist .
 
           # Crea directory release sul VPS
           ssh -i $SSH_KEY $SSH_TARGET "mkdir -p ${{ env.VPS_PATH }}/releases/$RELEASE_NAME"
