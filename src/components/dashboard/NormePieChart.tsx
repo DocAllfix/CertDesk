@@ -28,6 +28,7 @@ const PHASE_COLORS: Record<string, string> = {
   richiesta_proforma:      'hsl(37,97%,69%)',
   elaborazione_pratica:    'hsl(151,64%,51%)',
   firme:                   'hsl(351,75%,62%)',
+  invio_firme:             'hsl(188,84%,42%)',
 }
 
 const FASE_SHORT: Record<FaseType, string> = {
@@ -36,6 +37,7 @@ const FASE_SHORT: Record<FaseType, string> = {
   richiesta_proforma:      'Proforma',
   elaborazione_pratica:    'Elaborazione',
   firme:                   'Firme',
+  invio_firme:             'Invio Firme',
   completata:              'Completata',
 }
 
@@ -45,6 +47,7 @@ const FASE_FULL: Record<FaseType, string> = {
   richiesta_proforma:      'Richiesta Proforma',
   elaborazione_pratica:    'Elaborazione Pratica',
   firme:                   'Firme',
+  invio_firme:             'Invio Firme',
   completata:              'Completata',
 }
 
@@ -54,6 +57,7 @@ const FASE_ORDER: FaseType[] = [
   'richiesta_proforma',
   'elaborazione_pratica',
   'firme',
+  'invio_firme',
 ]
 
 // ── Tipi interni ─────────────────────────────────────────────────

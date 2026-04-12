@@ -33,6 +33,27 @@ export async function getClienti(search?: string) {
 }
 
 /**
+ * Restituisce tutti i clienti archiviati (attivo = false).
+ * Usato dalla pagina Archivio per il ripristino.
+ */
+export async function getClientiArchiviati(search?: string) {
+  let query = supabase
+    .from('clienti')
+    .select('*')
+    .eq('attivo', false)
+    .order('nome', { ascending: true })
+
+  if (search && search.trim() !== '') {
+    const term = search.trim()
+    query = query.or(`nome.ilike.%${term}%,ragione_sociale.ilike.%${term}%`)
+  }
+
+  const { data, error } = await query
+  if (error) throw new Error(`Errore nel caricamento dei clienti archiviati: ${error.message}`)
+  return data
+}
+
+/**
  * Restituisce un singolo cliente per ID.
  * Lancia un errore se non trovato.
  */
@@ -75,12 +96,25 @@ export async function updateCliente(id: string, data: UpdateCliente) {
   return updated
 }
 
-/** Soft delete: imposta attivo = false invece di eliminare il record */
-export async function softDeleteCliente(id: string) {
+/**
+ * Soft delete: imposta attivo = false e salva la nota di archiviazione.
+ * La nota è obbligatoria (enforced lato UI) per tracciabilità.
+ */
+export async function softDeleteCliente(id: string, nota: string) {
   const { error } = await supabase
     .from('clienti')
-    .update({ attivo: false })
+    .update({ attivo: false, nota_archiviazione: nota })
     .eq('id', id)
 
   if (error) throw new Error(`Errore nell'archiviazione del cliente: ${error.message}`)
+}
+
+/** Ripristina un cliente archiviato: attivo → true, nota_archiviazione → null. */
+export async function ripristinaCliente(id: string) {
+  const { error } = await supabase
+    .from('clienti')
+    .update({ attivo: true, nota_archiviazione: null })
+    .eq('id', id)
+
+  if (error) throw new Error(`Errore nel ripristino del cliente: ${error.message}`)
 }

@@ -42,6 +42,7 @@
     --phase-3:              37 97% 69%;         /* Ambra #FDBC64 */
     --phase-4:              151 64% 51%;        /* Verde #33D391 */
     --phase-5:              351 75% 62%;        /* Rosa  #E8697D */
+    --phase-6:              188 84% 42%;        /* Teal  #10AFC4 */
     --chart-1:              213 100% 46%;
     --chart-2:              263 46% 47%;
     --chart-3:              37 97% 69%;
@@ -90,6 +91,7 @@
     --phase-3:              37 97% 69%;
     --phase-4:              151 64% 51%;
     --phase-5:              351 75% 62%;
+    --phase-6:              188 84% 42%;
     --chart-1:              213 100% 46%;
     --chart-2:              263 46% 47%;
     --chart-3:              37 97% 69%;
@@ -143,6 +145,7 @@
   --color-phase-3:                hsl(var(--phase-3));
   --color-phase-4:                hsl(var(--phase-4));
   --color-phase-5:                hsl(var(--phase-5));
+  --color-phase-6:                hsl(var(--phase-6));
   /* Chart */
   --color-chart-1:                hsl(var(--chart-1));
   --color-chart-2:                hsl(var(--chart-2));

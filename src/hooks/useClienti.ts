@@ -4,10 +4,12 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   getClienti,
+  getClientiArchiviati,
   getCliente,
   createCliente,
   updateCliente,
   softDeleteCliente,
+  ripristinaCliente,
   type InsertCliente,
   type UpdateCliente,
 } from '@/lib/queries/clienti'
@@ -15,9 +17,10 @@ import {
 // ── Query Keys ───────────────────────────────────────────────────
 
 export const clientiKeys = {
-  all:    ['clienti']                                   as const,
-  list:   (search?: string) => ['clienti', 'list', search ?? ''] as const,
-  detail: (id: string)      => ['clienti', 'detail', id]         as const,
+  all:         ['clienti']                                              as const,
+  list:        (search?: string) => ['clienti', 'list', search ?? '']     as const,
+  archiviati:  (search?: string) => ['clienti', 'archiviati', search ?? ''] as const,
+  detail:      (id: string)      => ['clienti', 'detail', id]              as const,
 }
 
 // ── Lista ────────────────────────────────────────────────────────
@@ -26,6 +29,13 @@ export function useClienti(search?: string) {
   return useQuery({
     queryKey: clientiKeys.list(search),
     queryFn:  () => getClienti(search),
+  })
+}
+
+export function useClientiArchiviati(search?: string) {
+  return useQuery({
+    queryKey: clientiKeys.archiviati(search),
+    queryFn:  () => getClientiArchiviati(search),
   })
 }
 
@@ -66,7 +76,18 @@ export function useUpdateCliente() {
 export function useDeleteCliente() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (id: string) => softDeleteCliente(id),
+    mutationFn: ({ id, nota }: { id: string; nota: string }) =>
+      softDeleteCliente(id, nota),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: clientiKeys.all })
+    },
+  })
+}
+
+export function useRipristinaCliente() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (id: string) => ripristinaCliente(id),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: clientiKeys.all })
     },

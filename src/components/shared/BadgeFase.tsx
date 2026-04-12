@@ -21,6 +21,7 @@ const FASE_CONFIG: Record<FaseType, { label: string; short: string; colorClass: 
   richiesta_proforma:      { label: 'Richiesta Proforma',      short: 'Proforma',     colorClass: 'bg-phase-3/10 text-phase-3 border-phase-3/20' },
   elaborazione_pratica:    { label: 'Elaborazione Pratica',    short: 'Elaborazione', colorClass: 'bg-phase-4/10 text-phase-4 border-phase-4/20' },
   firme:                   { label: 'Firme',                   short: 'Firme',        colorClass: 'bg-phase-5/10 text-phase-5 border-phase-5/20' },
+  invio_firme:             { label: 'Invio Firme',             short: 'Invio',        colorClass: 'bg-phase-6/10 text-phase-6 border-phase-6/20' },
   completata:              { label: 'Completata',              short: 'Completata',   colorClass: 'bg-muted text-muted-foreground border-border'   },
 }
 

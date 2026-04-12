@@ -41,6 +41,7 @@ const FASE_LABELS: Record<FaseType, string> = {
   richiesta_proforma:      'Richiesta Proforma',
   elaborazione_pratica:    'Elaborazione Pratica',
   firme:                   'Firme',
+  invio_firme:             'Invio Firme',
   completata:              'Completata',
 }
 

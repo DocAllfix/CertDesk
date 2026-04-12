@@ -4,10 +4,12 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   getConsulenti,
+  getConsulentiArchiviati,
   getConsulente,
   createConsulente,
   updateConsulente,
   softDeleteConsulente,
+  ripristinaConsulente,
   getConsulentiNorme,
   setConsulentiNorme,
   type InsertConsulente,
@@ -17,9 +19,10 @@ import {
 // ── Query Keys ───────────────────────────────────────────────────
 
 export const consulentiKeys = {
-  all:    ['consulenti']                                      as const,
-  list:   (search?: string) => ['consulenti', 'list', search ?? ''] as const,
-  detail: (id: string)      => ['consulenti', 'detail', id]         as const,
+  all:        ['consulenti']                                               as const,
+  list:       (search?: string) => ['consulenti', 'list', search ?? '']     as const,
+  archiviati: (search?: string) => ['consulenti', 'archiviati', search ?? ''] as const,
+  detail:     (id: string)      => ['consulenti', 'detail', id]             as const,
 }
 
 // ── Lista ────────────────────────────────────────────────────────
@@ -28,6 +31,13 @@ export function useConsulenti(search?: string) {
   return useQuery({
     queryKey: consulentiKeys.list(search),
     queryFn:  () => getConsulenti(search),
+  })
+}
+
+export function useConsulentiArchiviati(search?: string) {
+  return useQuery({
+    queryKey: consulentiKeys.archiviati(search),
+    queryFn:  () => getConsulentiArchiviati(search),
   })
 }
 
@@ -68,7 +78,18 @@ export function useUpdateConsulente() {
 export function useDeleteConsulente() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (id: string) => softDeleteConsulente(id),
+    mutationFn: ({ id, nota }: { id: string; nota: string }) =>
+      softDeleteConsulente(id, nota),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: consulentiKeys.all })
+    },
+  })
+}
+
+export function useRipristinaConsulente() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (id: string) => ripristinaConsulente(id),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: consulentiKeys.all })
     },

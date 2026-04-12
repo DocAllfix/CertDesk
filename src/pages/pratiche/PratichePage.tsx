@@ -48,6 +48,7 @@ const FASE_OPTIONS: { value: FaseType; label: string }[] = [
   { value: 'richiesta_proforma',      label: 'Richiesta Proforma' },
   { value: 'elaborazione_pratica',    label: 'Elaborazione' },
   { value: 'firme',                   label: 'Firme' },
+  { value: 'invio_firme',             label: 'Invio Firme' },
 ]
 
 const CICLO_OPTIONS: { value: CicloType; label: string }[] = [
@@ -447,7 +448,7 @@ export default function PratichePage() {
         <div className="relative">
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
           <Input
-            placeholder="Cerca pratica..."
+            placeholder="Cerca pratica, cliente..."
             value={ricerca}
             onChange={e => setParam('ricerca', e.target.value || null)}
             className="pl-8 h-8 bg-muted/40 border-border/60 text-sm w-44 focus:w-56 transition-all"

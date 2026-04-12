@@ -51,6 +51,7 @@ const FASE_LABELS: Record<FaseType, string> = {
   richiesta_proforma:      'Richiesta Proforma',
   elaborazione_pratica:    'Elaborazione Pratica',
   firme:                   'Firme',
+  invio_firme:             'Invio Firme',
   completata:              'Completata',
 }
 
@@ -60,6 +61,7 @@ const FASE_SHORT: Record<FaseType, string> = {
   richiesta_proforma:      'Proforma',
   elaborazione_pratica:    'Elaborazione',
   firme:                   'Firme',
+  invio_firme:             'Invio Firme',
   completata:              'Completata',
 }
 
@@ -69,6 +71,7 @@ const FASE_ORDER: FaseType[] = [
   'richiesta_proforma',
   'elaborazione_pratica',
   'firme',
+  'invio_firme',
   'completata',
 ]
 
@@ -79,6 +82,7 @@ const FASE_BAR_COLORS: Record<FaseType, string> = {
   richiesta_proforma:      'bg-phase-3',
   elaborazione_pratica:    'bg-phase-4',
   firme:                   'bg-phase-5',
+  invio_firme:             'bg-phase-6',
   completata:              'bg-muted-foreground/30',
 }
 

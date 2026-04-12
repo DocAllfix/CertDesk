@@ -33,6 +33,27 @@ export async function getConsulenti(search?: string) {
 }
 
 /**
+ * Restituisce tutti i consulenti archiviati (attivo = false).
+ * Usato dalla pagina Archivio per il ripristino.
+ */
+export async function getConsulentiArchiviati(search?: string) {
+  let query = supabase
+    .from('consulenti')
+    .select('*, consulenti_norme(norma_codice)')
+    .eq('attivo', false)
+    .order('nome', { ascending: true })
+
+  if (search && search.trim() !== '') {
+    const term = search.trim()
+    query = query.or(`nome.ilike.%${term}%,cognome.ilike.%${term}%,azienda.ilike.%${term}%`)
+  }
+
+  const { data, error } = await query
+  if (error) throw new Error(`Errore nel caricamento dei consulenti archiviati: ${error.message}`)
+  return data
+}
+
+/**
  * Restituisce un singolo consulente per ID.
  * Lancia un errore se non trovato.
  */
@@ -75,14 +96,27 @@ export async function updateConsulente(id: string, data: UpdateConsulente) {
   return updated
 }
 
-/** Soft delete: imposta attivo = false invece di eliminare il record */
-export async function softDeleteConsulente(id: string) {
+/**
+ * Soft delete: imposta attivo = false e salva la nota di archiviazione.
+ * La nota è obbligatoria (enforced lato UI) per tracciabilità.
+ */
+export async function softDeleteConsulente(id: string, nota: string) {
   const { error } = await supabase
     .from('consulenti')
-    .update({ attivo: false })
+    .update({ attivo: false, nota_archiviazione: nota })
     .eq('id', id)
 
   if (error) throw new Error(`Errore nell'archiviazione del consulente: ${error.message}`)
+}
+
+/** Ripristina un consulente archiviato: attivo → true, nota_archiviazione → null. */
+export async function ripristinaConsulente(id: string) {
+  const { error } = await supabase
+    .from('consulenti')
+    .update({ attivo: true, nota_archiviazione: null })
+    .eq('id', id)
+
+  if (error) throw new Error(`Errore nel ripristino del consulente: ${error.message}`)
 }
 
 // ── Norme ────────────────────────────────────────────────────────

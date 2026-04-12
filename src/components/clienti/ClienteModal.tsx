@@ -46,6 +46,8 @@ export function ClienteModal({ open, onClose, cliente }: ClienteModalProps) {
   const isEdit = !!cliente
   const [settoreOpen,  setSettoreOpen]  = useState(false)
   const [deleteConfirm, setDeleteConfirm] = useState(false)
+  const [archiveNota,  setArchiveNota]   = useState('')
+  const [archiveError, setArchiveError]  = useState<string | null>(null)
 
   const { mutateAsync: create,  isPending: isCreating, error: createError } = useCreateCliente()
   const { mutateAsync: update,  isPending: isUpdating, error: updateError } = useUpdateCliente()
@@ -91,6 +93,8 @@ export function ClienteModal({ open, onClose, cliente }: ClienteModalProps) {
       setSettoreOpen(false)
     }
     setDeleteConfirm(false)
+    setArchiveNota('')
+    setArchiveError(null)
   }, [open, cliente, reset])
 
   const onSubmit = async (data: ClienteFormData) => {
@@ -146,11 +150,17 @@ export function ClienteModal({ open, onClose, cliente }: ClienteModalProps) {
 
   const handleArchive = async () => {
     if (!cliente) return
+    const nota = archiveNota.trim()
+    if (nota.length < 3) {
+      setArchiveError('Inserisci una nota di almeno 3 caratteri')
+      return
+    }
+    setArchiveError(null)
     try {
-      await archive(cliente.id)
+      await archive({ id: cliente.id, nota })
       onClose()
-    } catch {
-      // errore catturato dalla mutation
+    } catch (err) {
+      setArchiveError(err instanceof Error ? err.message : 'Errore imprevisto')
     }
   }
 
@@ -317,27 +327,41 @@ export function ClienteModal({ open, onClose, cliente }: ClienteModalProps) {
 
           {/* Archivia — solo in edit mode */}
           {isEdit ? (
-            <div>
+            <div className="flex-1 mr-3">
               {deleteConfirm ? (
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-muted-foreground">Confermi archiviazione?</span>
-                  <Button
-                    type="button"
-                    variant="destructive"
-                    size="sm"
-                    onClick={handleArchive}
-                    disabled={isPending}
-                  >
-                    Archivia
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setDeleteConfirm(false)}
-                  >
-                    No
-                  </Button>
+                <div className="space-y-2">
+                  <Label className="text-xs font-medium">
+                    Motivo archiviazione <span className="text-destructive">*</span>
+                  </Label>
+                  <Textarea
+                    rows={2}
+                    className="resize-none text-xs"
+                    placeholder="Es. Cessata collaborazione, fusione aziendale..."
+                    value={archiveNota}
+                    onChange={(e) => setArchiveNota(e.target.value)}
+                  />
+                  {archiveError && (
+                    <p className="text-xs text-destructive">{archiveError}</p>
+                  )}
+                  <div className="flex items-center gap-2">
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      size="sm"
+                      onClick={handleArchive}
+                      disabled={isPending}
+                    >
+                      Conferma archiviazione
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => { setDeleteConfirm(false); setArchiveNota(''); setArchiveError(null) }}
+                    >
+                      Annulla
+                    </Button>
+                  </div>
                 </div>
               ) : (
                 <Button

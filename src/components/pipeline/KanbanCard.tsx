@@ -48,6 +48,7 @@ function MiniChecklist({ pratica }: { pratica: PraticaListItem }) {
     { title: 'Data verifica',    ok: !!pratica.data_verifica },
     { title: 'Proforma emessa',  ok: !!pratica.proforma_emessa },
     { title: 'Documenti',        ok: !!pratica.documenti_ricevuti },
+    { title: 'Firme inviate',    ok: !!pratica.firme_inviate },
     { title: 'Completata',       ok: pratica.fase === 'completata' },
   ]
   return (

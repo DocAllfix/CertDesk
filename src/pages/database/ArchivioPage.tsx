@@ -28,6 +28,8 @@ import { BadgeCiclo }   from '@/components/shared/BadgeCiclo'
 import { BadgeUrgenza } from '@/components/shared/BadgeUrgenza'
 
 import { usePratiche, useRipristinaPratica } from '@/hooks/usePratiche'
+import { useClientiArchiviati, useRipristinaCliente } from '@/hooks/useClienti'
+import { useConsulentiArchiviati, useRipristinaConsulente } from '@/hooks/useConsulenti'
 import { useAuth } from '@/hooks/useAuth'
 
 import type { CicloType, FiltriPratiche } from '@/types/app.types'
@@ -122,6 +124,7 @@ export default function ArchivioPage() {
   const ripristinaMut                    = useRipristinaPratica()
 
   // ── URL params ────────────────────────────────────────────────
+  const tab     = (searchParams.get('tab') as 'pratiche' | 'clienti' | 'consulenti' | null) ?? 'pratiche'
   const ricerca = searchParams.get('ricerca') ?? ''
   const anno    = searchParams.get('anno')
   const norma   = searchParams.get('norma')
@@ -148,6 +151,34 @@ export default function ArchivioPage() {
 
   const { data: rawData = [], isLoading, error } = usePratiche(filtriQuery)
   const pratiche = rawData as unknown as PraticaArchivioRaw[]
+
+  // ── Query clienti / consulenti archiviati ────────────────────
+  const {
+    data: clientiArch = [],
+    isLoading: isLoadingClienti,
+    error: errorClienti,
+  } = useClientiArchiviati(tab === 'clienti' ? ricerca : undefined)
+
+  const {
+    data: consulentiArch = [],
+    isLoading: isLoadingConsulenti,
+    error: errorConsulenti,
+  } = useConsulentiArchiviati(tab === 'consulenti' ? ricerca : undefined)
+
+  const ripristinaClienteMut    = useRipristinaCliente()
+  const ripristinaConsulenteMut = useRipristinaConsulente()
+
+  async function handleRipristinaCliente(id: string, nome: string) {
+    if (!window.confirm(`Ripristinare il cliente "${nome}"?\nTornerà attivo nel database.`)) return
+    try { await ripristinaClienteMut.mutateAsync(id) }
+    catch (err) { alert((err as Error).message) }
+  }
+
+  async function handleRipristinaConsulente(id: string, nome: string) {
+    if (!window.confirm(`Ripristinare il consulente "${nome}"?\nTornerà attivo nel database.`)) return
+    try { await ripristinaConsulenteMut.mutateAsync(id) }
+    catch (err) { alert((err as Error).message) }
+  }
 
   // ── Filtro anno client-side + anni disponibili ────────────────
   const anniDisponibili = useMemo(() => {
@@ -237,6 +268,30 @@ export default function ArchivioPage() {
         </div>
       </div>
 
+      {/* Tabs */}
+      <div className="flex items-center gap-1 mb-4 border-b border-border">
+        {(['pratiche', 'clienti', 'consulenti'] as const).map(t => (
+          <button
+            key={t}
+            type="button"
+            onClick={() => setParam('tab', t === 'pratiche' ? null : t)}
+            className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px cursor-pointer ${
+              tab === t
+                ? 'border-primary text-primary'
+                : 'border-transparent text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            {t === 'pratiche' ? 'Pratiche' : t === 'clienti' ? 'Clienti' : 'Consulenti'}
+            {t === 'clienti' && clientiArch.length > 0 && (
+              <span className="ml-1.5 text-xs bg-muted px-1.5 py-0.5 rounded-full">{clientiArch.length}</span>
+            )}
+            {t === 'consulenti' && consulentiArch.length > 0 && (
+              <span className="ml-1.5 text-xs bg-muted px-1.5 py-0.5 rounded-full">{consulentiArch.length}</span>
+            )}
+          </button>
+        ))}
+      </div>
+
       {/* Toolbar */}
       <div className="flex items-center gap-2 mb-4 flex-wrap">
 
@@ -244,15 +299,20 @@ export default function ArchivioPage() {
         <div className="relative">
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
           <Input
-            placeholder="Cerca pratica..."
+            placeholder={
+              tab === 'pratiche' ? 'Cerca pratica, cliente...'
+              : tab === 'clienti' ? 'Cerca cliente...'
+              : 'Cerca consulente...'
+            }
             value={ricerca}
             onChange={e => setParam('ricerca', e.target.value || null)}
             className="pl-8 h-8 bg-muted/40 border-border/60 text-sm w-44 focus:w-56 transition-all"
           />
         </div>
 
-        <div className="w-px h-5 bg-border mx-1" />
+        {tab === 'pratiche' && <div className="w-px h-5 bg-border mx-1" />}
 
+        {tab === 'pratiche' && (<>
         {/* Filtro Anno */}
         <Select value={anno ?? 'all'} onValueChange={v => setParam('anno', v === 'all' ? null : v)}>
           <SelectTrigger className="h-8 px-3 bg-transparent border-border/60 text-sm w-auto gap-1.5">
@@ -288,10 +348,12 @@ export default function ArchivioPage() {
             {CICLO_OPTIONS.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
           </SelectContent>
         </Select>
+        </>)}
 
       </div>
 
-      {/* Tabella */}
+      {/* Tabella pratiche */}
+      {tab === 'pratiche' && (
       <div className="bg-card rounded-xl border border-border overflow-hidden">
 
         {/* Loading */}
@@ -380,6 +442,168 @@ export default function ArchivioPage() {
           />
         )}
       </div>
+      )}
+
+      {/* Clienti archiviati */}
+      {tab === 'clienti' && (
+        <div className="bg-card rounded-xl border border-border overflow-hidden">
+          {isLoadingClienti && (
+            <div className="flex items-center justify-center py-16">
+              <Loader2 className="size-5 text-muted-foreground animate-spin" />
+            </div>
+          )}
+          {errorClienti && !isLoadingClienti && (
+            <div className="py-12 text-center">
+              <p className="text-sm text-destructive">{(errorClienti as Error).message}</p>
+            </div>
+          )}
+          {!isLoadingClienti && !errorClienti && clientiArch.length === 0 && (
+            <div className="py-16 flex flex-col items-center gap-3">
+              <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center">
+                <FolderOpen className="w-6 h-6 text-muted-foreground" />
+              </div>
+              <p className="text-sm font-medium text-foreground">Nessun cliente archiviato</p>
+            </div>
+          )}
+          {!isLoadingClienti && !errorClienti && clientiArch.length > 0 && (
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse">
+                <thead>
+                  <tr className="border-b border-border bg-muted/20">
+                    <th className="text-left text-xs font-medium text-muted-foreground px-3 py-2.5">Cliente</th>
+                    <th className="text-left text-xs font-medium text-muted-foreground px-3 py-2.5">P.IVA</th>
+                    <th className="text-left text-xs font-medium text-muted-foreground px-3 py-2.5">Motivo archiviazione</th>
+                    <th className="w-12 px-3 py-2.5" />
+                  </tr>
+                </thead>
+                <tbody>
+                  {clientiArch.map(c => (
+                    <tr key={c.id} className="border-b border-border/50 last:border-0 hover:bg-muted/20 transition-colors group">
+                      <td className="px-3 py-3.5">
+                        <p className="text-sm font-medium text-foreground">{c.nome}</p>
+                        {c.ragione_sociale && (
+                          <p className="text-xs text-muted-foreground">{c.ragione_sociale}</p>
+                        )}
+                      </td>
+                      <td className="px-3 py-3.5">
+                        <span className="text-sm font-mono text-muted-foreground">{c.piva ?? '—'}</span>
+                      </td>
+                      <td className="px-3 py-3.5">
+                        <span className="text-sm text-muted-foreground italic">
+                          {c.nota_archiviazione ?? '—'}
+                        </span>
+                      </td>
+                      <td className="px-3 py-3.5">
+                        {isAdmin && (
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="sm" className="h-7 w-7 p-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <MoreHorizontal className="w-4 h-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-40">
+                              <DropdownMenuItem
+                                onClick={() => handleRipristinaCliente(c.id, c.nome)}
+                                disabled={ripristinaClienteMut.isPending}
+                                className="text-warning focus:text-warning"
+                              >
+                                <RotateCcw className="w-3.5 h-3.5 mr-2" />
+                                Ripristina
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Consulenti archiviati */}
+      {tab === 'consulenti' && (
+        <div className="bg-card rounded-xl border border-border overflow-hidden">
+          {isLoadingConsulenti && (
+            <div className="flex items-center justify-center py-16">
+              <Loader2 className="size-5 text-muted-foreground animate-spin" />
+            </div>
+          )}
+          {errorConsulenti && !isLoadingConsulenti && (
+            <div className="py-12 text-center">
+              <p className="text-sm text-destructive">{(errorConsulenti as Error).message}</p>
+            </div>
+          )}
+          {!isLoadingConsulenti && !errorConsulenti && consulentiArch.length === 0 && (
+            <div className="py-16 flex flex-col items-center gap-3">
+              <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center">
+                <FolderOpen className="w-6 h-6 text-muted-foreground" />
+              </div>
+              <p className="text-sm font-medium text-foreground">Nessun consulente archiviato</p>
+            </div>
+          )}
+          {!isLoadingConsulenti && !errorConsulenti && consulentiArch.length > 0 && (
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse">
+                <thead>
+                  <tr className="border-b border-border bg-muted/20">
+                    <th className="text-left text-xs font-medium text-muted-foreground px-3 py-2.5">Consulente</th>
+                    <th className="text-left text-xs font-medium text-muted-foreground px-3 py-2.5">Azienda</th>
+                    <th className="text-left text-xs font-medium text-muted-foreground px-3 py-2.5">Motivo archiviazione</th>
+                    <th className="w-12 px-3 py-2.5" />
+                  </tr>
+                </thead>
+                <tbody>
+                  {consulentiArch.map(cn => {
+                    const fullName = `${cn.nome}${cn.cognome ? ' ' + cn.cognome : ''}`
+                    return (
+                      <tr key={cn.id} className="border-b border-border/50 last:border-0 hover:bg-muted/20 transition-colors group">
+                        <td className="px-3 py-3.5">
+                          <p className="text-sm font-medium text-foreground">{fullName}</p>
+                          {cn.email && (
+                            <p className="text-xs text-muted-foreground">{cn.email}</p>
+                          )}
+                        </td>
+                        <td className="px-3 py-3.5">
+                          <span className="text-sm text-muted-foreground">{cn.azienda ?? '—'}</span>
+                        </td>
+                        <td className="px-3 py-3.5">
+                          <span className="text-sm text-muted-foreground italic">
+                            {cn.nota_archiviazione ?? '—'}
+                          </span>
+                        </td>
+                        <td className="px-3 py-3.5">
+                          {isAdmin && (
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="sm" className="h-7 w-7 p-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                                  <MoreHorizontal className="w-4 h-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end" className="w-40">
+                                <DropdownMenuItem
+                                  onClick={() => handleRipristinaConsulente(cn.id, fullName)}
+                                  disabled={ripristinaConsulenteMut.isPending}
+                                  className="text-warning focus:text-warning"
+                                >
+                                  <RotateCcw className="w-3.5 h-3.5 mr-2" />
+                                  Ripristina
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          )}
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   )
 }

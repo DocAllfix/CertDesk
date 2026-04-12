@@ -40,7 +40,8 @@ const FASE_ORDINE: Record<FaseType, number> = {
   richiesta_proforma:      3,
   elaborazione_pratica:    4,
   firme:                   5,
-  completata:              6,
+  invio_firme:             6,
+  completata:              7,
 }
 
 function fmtData(d: string | null | undefined): string {

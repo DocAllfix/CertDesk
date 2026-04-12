@@ -121,10 +121,25 @@ export async function getPratiche(filtri: FiltriPratiche = {}) {
   if (filtri.scadenza_max)     query = query.lte('data_scadenza', filtri.scadenza_max)
   if (praticaIds)              query = query.in('id', praticaIds)
 
-  // Ricerca testuale su numero_pratica e note (campi diretti della tabella)
+  // Ricerca testuale su numero_pratica, note, nome cliente e ragione_sociale.
+  // Case-insensitive. Per il nome cliente facciamo un pre-lookup sui clienti
+  // che matchano il termine e includiamo i loro id nella OR clause.
   if (filtri.ricerca?.trim()) {
-    const term = filtri.ricerca.trim()
-    query = query.or(`numero_pratica.ilike.%${term}%,note.ilike.%${term}%`)
+    const term = filtri.ricerca.trim().replace(/[,()]/g, ' ')
+    const { data: clientiMatch } = await supabase
+      .from('clienti')
+      .select('id')
+      .or(`nome.ilike.%${term}%,ragione_sociale.ilike.%${term}%`)
+    const clientiIds = (clientiMatch ?? []).map(c => c.id)
+
+    const orParts = [
+      `numero_pratica.ilike.%${term}%`,
+      `note.ilike.%${term}%`,
+    ]
+    if (clientiIds.length > 0) {
+      orParts.push(`cliente_id.in.(${clientiIds.join(',')})`)
+    }
+    query = query.or(orParts.join(','))
   }
 
   // Ordinamento primario (default: updated_at DESC → pratiche recenti prima)
@@ -222,8 +237,10 @@ export async function checkNumeroPraticaExists(numeroPratica: string): Promise<b
  * Import completata: se la pratica viene creata con fase = 'completata' e
  * sorveglianza_reminder_creato = true, il trigger on_pratica_completata NON
  * scatta (è BEFORE UPDATE, non INSERT). Il promemoria sorveglianza viene
- * creato qui calcolando completata_at + 365gg (o 1095gg per SA 8000),
- * formula identica al trigger DB (migration 012) e al cron recovery.
+ * creato qui calcolando data_emissione_certificato + 365gg (o 1095gg per
+ * SA 8000): per le pratiche preesistenti importate la base è la data di
+ * emissione del certificato, non la data di completamento gestionale.
+ * Il normal workflow (trigger DB on completata) continua a usare completata_at.
  *
  * ATTENZIONE: non è atomico — se l'inserimento norme/promemoria fallisce,
  * la pratica esiste già. Accettabile per questo use case.
@@ -256,21 +273,25 @@ export async function createPratica({ norme, ...praticaData }: CreatePraticaData
 
   // ── Import completata: promemoria sorveglianza manuale ─────────
   // Il trigger on_pratica_completata NON scatta su INSERT (è BEFORE UPDATE).
-  // Calcoliamo data_scadenza del promemoria come completata_at + 365/1095 giorni,
-  // identico alla formula del trigger DB (migration 012) e del cron recovery.
+  // Base di calcolo: data_emissione_certificato (obbligatoria per gli import
+  // completati — vedi importPraticaSchema). Per le pratiche importate la data
+  // di emissione del certificato è il riferimento corretto del ciclo
+  // certificativo; completata_at è solo la data di import nel gestionale.
+  // Fallback a completata_at per robustezza se il campo dovesse mancare.
   // Insert diretto (non createPromemoria) per evitare side-effect notifica.
   // creato_da è NOT NULL nel DB — serve un utente valido
   const promCreator = created.assegnato_a ?? created.created_by
+  const baseProm = created.data_emissione_certificato ?? created.completata_at
   if (
     created.fase === 'completata' &&
     created.sorveglianza_reminder_creato === true &&
-    created.completata_at &&
+    baseProm &&
     promCreator
   ) {
     const hasSA8000 = norme?.includes('SA 8000') ?? false
     const giorniScadenza = hasSA8000 ? 1095 : 365
 
-    const baseDate = new Date(created.completata_at)
+    const baseDate = new Date(baseProm)
     baseDate.setDate(baseDate.getDate() + giorniScadenza)
     const dataScadenzaProm = baseDate.toISOString().split('T')[0]
 

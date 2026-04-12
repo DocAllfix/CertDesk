@@ -150,6 +150,25 @@ export async function createFaseChangeNotifications(
       break
     }
 
+    // → Fase 6: Invio Firme — notifica admin + assegnato
+    case 'invio_firme': {
+      const destinatari = new Set<string>()
+      if (pratica.assegnato_a) destinatari.add(pratica.assegnato_a)
+      for (const admin of admins) destinatari.add(admin.id)
+      destinatari.delete(userId)
+
+      for (const destId of destinatari) {
+        specifiche.push({
+          destinatario_id: destId,
+          pratica_id:      pratica.id,
+          tipo:            'info',
+          titolo:          `Invio Firme — ${np}`,
+          messaggio:       `${nomeUtente} ha avanzato la pratica ${np} a ${faseLabel}. In attesa dell'invio delle firme per completare.`,
+        })
+      }
+      break
+    }
+
     // → Completata — notifica success a admin + assegnato_a
     case 'completata': {
       const destinatari = new Set<string>()

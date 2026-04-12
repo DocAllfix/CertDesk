@@ -8,12 +8,13 @@
  * Se canAdvanceFase() restituisce true ma il DB rifiuta →
  * mostrare l'errore del trigger DB all'utente senza modificarlo.
  *
- * Prerequisiti (da DDL migration 006, L80-98):
+ * Prerequisiti (da DDL migration 024):
  * - → programmazione_verifica: nessuno
  * - → richiesta_proforma:     data_verifica IS NOT NULL
  * - → elaborazione_pratica:   proforma_emessa = true
  * - → firme:                  documenti_ricevuti = true
- * - → completata:             nessuno
+ * - → invio_firme:            nessuno
+ * - → completata:             firme_inviate = true
  */
 
 import type { FaseType, Pratica } from '@/types/app.types'
@@ -26,6 +27,7 @@ export const FASI_ORDINE: readonly FaseType[] = [
   'richiesta_proforma',
   'elaborazione_pratica',
   'firme',
+  'invio_firme',
   'completata',
 ] as const
 
@@ -35,7 +37,8 @@ export const FASE_INDEX: Record<FaseType, number> = {
   richiesta_proforma:      2,
   elaborazione_pratica:    3,
   firme:                   4,
-  completata:              5,
+  invio_firme:             5,
+  completata:              6,
 }
 
 // ── Label fasi (per messaggi UI) ─────────────────────────────────
@@ -46,6 +49,7 @@ export const FASE_LABELS: Record<FaseType, string> = {
   richiesta_proforma:      'Richiesta Proforma',
   elaborazione_pratica:    'Elaborazione Pratica',
   firme:                   'Firme',
+  invio_firme:             'Invio Firme',
   completata:              'Completata',
 }
 
@@ -83,7 +87,7 @@ export function getPrevFase(fase: FaseType): FaseType | null {
  * - documenti_ricevuti: boolean | null
  */
 export function canAdvanceFase(
-  pratica: Pick<Pratica, 'fase' | 'stato' | 'data_verifica' | 'proforma_emessa' | 'documenti_ricevuti'>,
+  pratica: Pick<Pratica, 'fase' | 'stato' | 'data_verifica' | 'proforma_emessa' | 'documenti_ricevuti' | 'firme_inviate'>,
   nuovaFase: FaseType
 ): PreValidazioneFase {
   const missing: string[] = []
@@ -133,8 +137,13 @@ export function canAdvanceFase(
           missing.push('Documenti devono essere ricevuti per avanzare a Firme')
         }
         break
+      case 'invio_firme':
+        // nessun prerequisito (da firme a invio_firme)
+        break
       case 'completata':
-        // nessun prerequisito (da firme a completata)
+        if (!pratica.firme_inviate) {
+          missing.push('Le firme devono essere inviate per completare la pratica')
+        }
         break
     }
   }

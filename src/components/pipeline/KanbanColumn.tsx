@@ -12,7 +12,7 @@
 import { KanbanCard } from './KanbanCard'
 import type { PraticaListItem, FaseType } from '@/types/app.types'
 
-// ── Config fasi (solo le 5 attive, no completata) ────────────────
+// ── Config fasi (solo le 6 attive, no completata) ────────────────
 
 interface FaseColumnConfig {
   fase: FaseType
@@ -26,6 +26,7 @@ export const PIPELINE_FASI: FaseColumnConfig[] = [
   { fase: 'richiesta_proforma',      label: 'Proforma',           bgColor: 'bg-phase-3' },
   { fase: 'elaborazione_pratica',    label: 'Elaborazione',       bgColor: 'bg-phase-4' },
   { fase: 'firme',                   label: 'Firme',              bgColor: 'bg-phase-5' },
+  { fase: 'invio_firme',             label: 'Invio Firme',        bgColor: 'bg-phase-6' },
 ]
 
 // ── Props ─────────────────────────────────────────────────────────

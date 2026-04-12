@@ -54,7 +54,7 @@ interface Prerequisito {
   label:       string
   soddisfatto: boolean
   editType?:   'date' | 'toggle'
-  fieldName?:  'data_verifica' | 'proforma_emessa' | 'documenti_ricevuti'
+  fieldName?:  'data_verifica' | 'proforma_emessa' | 'documenti_ricevuti' | 'firme_inviate'
   actionLabel?: string
 }
 
@@ -105,9 +105,22 @@ function getPrerequisiti(
           actionLabel: 'Segna come ricevuti',
         },
       ]
+    case 'invio_firme':
+      return [
+        { id: 'none', label: 'Nessun prerequisito richiesto', soddisfatto: true },
+      ]
     case 'completata':
       return [
-        { id: 'none', label: 'Nessun prerequisito aggiuntivo', soddisfatto: true },
+        {
+          id:          'firme_inviate',
+          label:       pratica.firme_inviate
+            ? 'Firme inviate'
+            : 'Firme non ancora inviate',
+          soddisfatto: !!pratica.firme_inviate,
+          editType:    'toggle',
+          fieldName:   'firme_inviate',
+          actionLabel: 'Segna come inviate',
+        },
       ]
     default:
       return []
@@ -140,7 +153,7 @@ export function AvanzaFaseModal({ open, onClose, pratica, targetFase }: AvanzaFa
   // Usa updatePratica diretto + invalidateQueries(detail) — NON useUpdatePratica
   // per evitare il setQueryData con flat row che causerebbe crash in PraticaDettaglio.
   const inlineSave = useMutation({
-    mutationFn: (update: { data_verifica?: string; proforma_emessa?: boolean; documenti_ricevuti?: boolean }) =>
+    mutationFn: (update: { data_verifica?: string; proforma_emessa?: boolean; documenti_ricevuti?: boolean; firme_inviate?: boolean }) =>
       updatePratica(pratica.id, update),
     onSuccess: () => {
       // Refetch del dettaglio: la pratica prop si aggiornerà automaticamente

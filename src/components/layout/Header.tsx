@@ -4,7 +4,8 @@
  *
  * h-12 · bg-card · border-b · sticky top-0 z-30
  */
-import { useLocation } from 'react-router-dom'
+import { useState } from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { Search, Sun, Moon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -68,10 +69,19 @@ interface HeaderProps {
 
 export function Header({ onOpenNotifications }: HeaderProps) {
   const location  = useLocation()
+  const navigate  = useNavigate()
   const { userProfile } = useAuth()
   const { isDark, toggleTheme } = useTheme()
+  const [searchTerm, setSearchTerm] = useState('')
 
   const title = getPageTitle(location.pathname)
+
+  const handleSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    const term = searchTerm.trim()
+    if (!term) return
+    navigate(`/pratiche?ricerca=${encodeURIComponent(term)}`)
+  }
 
   return (
     <header className="h-12 bg-card border-b border-border flex items-center justify-between px-5 shrink-0 sticky top-0 z-30">
@@ -86,15 +96,16 @@ export function Header({ onOpenNotifications }: HeaderProps) {
       {/* ── Azioni destra ────────────────────────────────────── */}
       <div className="flex items-center gap-2">
 
-        {/* Ricerca (non funzionale fino a F9) */}
-        <div className="relative hidden md:block">
-          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+        {/* Ricerca globale → naviga a /pratiche?ricerca=... */}
+        <form onSubmit={handleSearchSubmit} className="relative hidden md:block">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground pointer-events-none" />
           <Input
             placeholder="Cerca pratica, cliente..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
             className="w-52 pl-8 h-8 bg-muted/40 border-border/60 text-sm focus:border-primary/40 focus:bg-card transition-colors"
-            readOnly
           />
-        </div>
+        </form>
 
         {/* Theme toggle */}
         <Button

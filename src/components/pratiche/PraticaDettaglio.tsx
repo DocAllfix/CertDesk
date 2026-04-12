@@ -14,7 +14,7 @@ import { Link } from 'react-router-dom'
 import {
   ArrowLeft, ChevronRight, Check,
   User, Calendar, MapPin,
-  Building2, FileText, Phone, Mail,
+  Building2, FileText, Phone, Mail, ShieldCheck,
 } from 'lucide-react'
 import { format } from 'date-fns'
 import { it } from 'date-fns/locale'
@@ -53,6 +53,7 @@ const FASI: FaseStep[] = [
   { fase: 'richiesta_proforma',      short: 'Proforma',     stepColor: 'bg-phase-3', ringColor: 'ring-phase-3/30', connColor: 'bg-phase-3' },
   { fase: 'elaborazione_pratica',    short: 'Elaborazione', stepColor: 'bg-phase-4', ringColor: 'ring-phase-4/30', connColor: 'bg-phase-4' },
   { fase: 'firme',                   short: 'Firme',        stepColor: 'bg-phase-5', ringColor: 'ring-phase-5/30', connColor: 'bg-phase-5' },
+  { fase: 'invio_firme',             short: 'Invio Firme',  stepColor: 'bg-phase-6', ringColor: 'ring-phase-6/30', connColor: 'bg-phase-6' },
   { fase: 'completata',              short: 'Completata',   stepColor: 'bg-success',  ringColor: 'ring-success/30',  connColor: 'bg-success'  },
 ]
 
@@ -62,7 +63,8 @@ const FASE_ORDINE: Record<FaseType, number> = {
   richiesta_proforma:      3,
   elaborazione_pratica:    4,
   firme:                   5,
-  completata:              6,
+  invio_firme:             6,
+  completata:              7,
 }
 
 const FASE_NEXT: Partial<Record<FaseType, FaseType>> = {
@@ -70,7 +72,8 @@ const FASE_NEXT: Partial<Record<FaseType, FaseType>> = {
   programmazione_verifica: 'richiesta_proforma',
   richiesta_proforma:      'elaborazione_pratica',
   elaborazione_pratica:    'firme',
-  firme:                   'completata',
+  firme:                   'invio_firme',
+  invio_firme:             'completata',
 }
 
 // ── Helpers ───────────────────────────────────────────────────────
@@ -106,7 +109,7 @@ export function PraticaDettaglio({ pratica }: PraticaDettaglioProps) {
   const [avanzaOpen, setAvanzaOpen] = useState(false)
   const updatePraticaMut = useUpdatePratica()
 
-  const handleToggleFlag = useCallback((field: 'proforma_richiesta' | 'proforma_emessa' | 'documenti_ricevuti', currentValue: boolean | null) => {
+  const handleToggleFlag = useCallback((field: 'proforma_richiesta' | 'proforma_emessa' | 'documenti_ricevuti' | 'firme_inviate', currentValue: boolean | null) => {
     const newValue = !currentValue
     updatePraticaMut.mutate(
       { id: pratica.id, data: { [field]: newValue } },
@@ -235,8 +238,9 @@ export function PraticaDettaglio({ pratica }: PraticaDettaglioProps) {
 
   const renderInfoSection = () => {
     const rows: { icon: React.ElementType; label: string; value: string }[] = [
-      { icon: Building2, label: 'Cliente',        value: clienteNome },
-      { icon: FileText,  label: 'Numero pratica', value: pratica.numero_pratica ?? '\u2014' },
+      { icon: Building2,  label: 'Cliente',        value: clienteNome },
+      { icon: FileText,   label: 'Numero pratica', value: pratica.numero_pratica ?? '\u2014' },
+      { icon: ShieldCheck, label: 'Ente di certificazione', value: pratica.ente_certificazione ?? '\u2014' },
       {
         icon: User,
         label: 'Tipo Contatto',
@@ -348,11 +352,12 @@ export function PraticaDettaglio({ pratica }: PraticaDettaglioProps) {
   // ── Colonna destra: Checklist flag (cliccabile) ────────────────
 
   const renderChecklist = () => {
-    type CheckItem = { label: string; value: boolean | null; field: 'proforma_richiesta' | 'proforma_emessa' | 'documenti_ricevuti' }
+    type CheckItem = { label: string; value: boolean | null; field: 'proforma_richiesta' | 'proforma_emessa' | 'documenti_ricevuti' | 'firme_inviate' }
     const items: CheckItem[] = [
       { label: 'Proforma richiesta', value: pratica.proforma_richiesta, field: 'proforma_richiesta' },
       { label: 'Proforma emessa',    value: pratica.proforma_emessa,    field: 'proforma_emessa'    },
       { label: 'Documenti ricevuti', value: pratica.documenti_ricevuti, field: 'documenti_ricevuti' },
+      { label: 'Firme inviate',      value: pratica.firme_inviate,      field: 'firme_inviate'      },
     ]
 
     return (

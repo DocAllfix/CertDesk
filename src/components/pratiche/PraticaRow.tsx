@@ -76,6 +76,7 @@ function ChecklistCompatta({ pratica }: { pratica: PraticaListItem }) {
   const flags = [
     { key: 'proforma',   value: pratica.proforma_emessa,    title: 'Proforma emessa' },
     { key: 'documenti',  value: pratica.documenti_ricevuti, title: 'Documenti ricevuti' },
+    { key: 'firme',      value: pratica.firme_inviate,      title: 'Firme inviate' },
   ]
   return (
     <div className="flex items-center gap-1">

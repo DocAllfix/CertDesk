@@ -47,7 +47,8 @@ const FASE_ORDINE: Record<FaseType, number> = {
   richiesta_proforma:     3,
   elaborazione_pratica:   4,
   firme:                  5,
-  completata:             6,
+  invio_firme:            6,
+  completata:             7,
 }
 
 const CICLO_LABELS: Record<CicloType, string> = {
@@ -67,12 +68,13 @@ const FASE_LABELS: Record<FaseType, string> = {
   richiesta_proforma:      'Richiesta Proforma',
   elaborazione_pratica:    'Elaborazione Pratica',
   firme:                   'Firme',
+  invio_firme:             'Invio Firme',
   completata:              'Completata',
 }
 
 const FASI_ORDINATE: FaseType[] = [
   'contratto_firmato', 'programmazione_verifica',
-  'richiesta_proforma', 'elaborazione_pratica', 'firme', 'completata',
+  'richiesta_proforma', 'elaborazione_pratica', 'firme', 'invio_firme', 'completata',
 ]
 
 // ── Helper ────────────────────────────────────────────────────────
@@ -131,6 +133,7 @@ export function ImportPraticaForm({ onSuccess, onCancel }: ImportPraticaFormProp
     cliente_id:    '',
     norme:         [],
     ciclo:         'certificazione',
+    ente_certificazione: 'ESQ',
     tipo_contatto: 'consulente',
     consulente_id: null,
     referente_nome:  null,
@@ -166,7 +169,7 @@ export function ImportPraticaForm({ onSuccess, onCancel }: ImportPraticaFormProp
   const tipoContatto     = watch('tipo_contatto')
   const normeSelezionate = watch('norme')
   const importFase       = watch('import_fase') as FaseType
-  const importCompletataAt = watch('import_completata_at')
+  const dataEmissioneCert  = watch('data_emissione_certificato')
 
   const faseIdx = FASI_ORDINATE.indexOf(importFase)
   const isCompletata = importFase === 'completata'
@@ -194,10 +197,13 @@ export function ImportPraticaForm({ onSuccess, onCancel }: ImportPraticaFormProp
   }, [importNumeroPratica])
 
   // ── Scadenza sorveglianza calcolata (per fase completata) ───────
+  // Base: data_emissione_certificato (obbligatoria per import completati).
+  // Per le pratiche preesistenti la data di emissione è il riferimento del
+  // ciclo certificativo — coerente con createPratica() e schema Zod.
   const scadenzaCalcolata = useMemo(() => {
-    if (!isCompletata || !importCompletataAt || (normeSelezionate ?? []).length === 0) return null
-    return calcolaScadenzaSorveglianza(importCompletataAt, normeSelezionate ?? [])
-  }, [isCompletata, importCompletataAt, normeSelezionate])
+    if (!isCompletata || !dataEmissioneCert || (normeSelezionate ?? []).length === 0) return null
+    return calcolaScadenzaSorveglianza(dataEmissioneCert, normeSelezionate ?? [])
+  }, [isCompletata, dataEmissioneCert, normeSelezionate])
 
   const oggi = new Date().toISOString().split('T')[0]
   const scadenzaPassata = scadenzaCalcolata ? scadenzaCalcolata < oggi : false
@@ -286,11 +292,14 @@ export function ImportPraticaForm({ onSuccess, onCancel }: ImportPraticaFormProp
     const faseImportIdx = FASI_ORDINATE.indexOf(import_fase)
 
     if (isCompletata) {
-      // Fase completata: calcola data_scadenza da completata_at + 365/1095
+      // Fase completata: calcola data_scadenza da data_emissione_certificato + 365/1095.
+      // Per le pratiche importate preesistenti il riferimento del ciclo è la data
+      // di emissione del certificato, non la data gestionale di completamento.
       const completataAtValue = import_completata_at!
+      const emissioneValue    = basePayload.data_emissione_certificato!
       const hasSA8000 = norme.includes('SA 8000')
       const giorni = hasSA8000 ? 1095 : 365
-      const baseDate = new Date(completataAtValue)
+      const baseDate = new Date(emissioneValue)
       baseDate.setDate(baseDate.getDate() + giorni)
       const dataScadenzaCalc = baseDate.toISOString().split('T')[0]
 
@@ -304,6 +313,7 @@ export function ImportPraticaForm({ onSuccess, onCancel }: ImportPraticaFormProp
         proforma_richiesta: true,
         proforma_emessa:    true,
         documenti_ricevuti: true,
+        firme_inviate:      true,
         numero_pratica:  import_numero_pratica || undefined,
         created_at:      import_created_at || undefined,
         norme,
@@ -317,6 +327,7 @@ export function ImportPraticaForm({ onSuccess, onCancel }: ImportPraticaFormProp
         proforma_richiesta: faseImportIdx >= 3 ? true : null,
         proforma_emessa:    faseImportIdx >= 3 ? true : undefined,
         documenti_ricevuti: faseImportIdx >= 4 ? true : null,
+        firme_inviate:      faseImportIdx >= 6 ? true : null,
         numero_pratica:  import_numero_pratica || undefined,
         created_at:      import_created_at || undefined,
         norme,
@@ -445,24 +456,49 @@ export function ImportPraticaForm({ onSuccess, onCancel }: ImportPraticaFormProp
                 </div>
               )}
             </div>
-            <div>
-              <Label className="text-sm font-medium mb-1.5 block">Ciclo</Label>
-              <Controller
-                control={control}
-                name="ciclo"
-                render={({ field }) => (
-                  <Select value={field.value} onValueChange={field.onChange}>
-                    <SelectTrigger className="cursor-pointer">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {(Object.entries(CICLO_LABELS) as [CicloType, string][]).map(([v, l]) => (
-                        <SelectItem key={v} value={v}>{l}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label className="text-sm font-medium mb-1.5 block">Ciclo</Label>
+                <Controller
+                  control={control}
+                  name="ciclo"
+                  render={({ field }) => (
+                    <Select value={field.value} onValueChange={field.onChange}>
+                      <SelectTrigger className="cursor-pointer">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {(Object.entries(CICLO_LABELS) as [CicloType, string][]).map(([v, l]) => (
+                          <SelectItem key={v} value={v}>{l}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
+              </div>
+              <div>
+                <Label className="text-sm font-medium mb-1.5 block">
+                  Ente di certificazione <span className="text-destructive">*</span>
+                </Label>
+                <Controller
+                  control={control}
+                  name="ente_certificazione"
+                  render={({ field }) => (
+                    <Select value={field.value} onValueChange={field.onChange}>
+                      <SelectTrigger className="cursor-pointer">
+                        <SelectValue placeholder="Seleziona..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="ESQ">ESQ</SelectItem>
+                        <SelectItem value="CERTIS">CERTIS</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
+                {errors.ente_certificazione && (
+                  <p className="text-xs text-destructive mt-1">{errors.ente_certificazione.message}</p>
                 )}
-              />
+              </div>
             </div>
           </div>
         </div>
@@ -681,6 +717,25 @@ export function ImportPraticaForm({ onSuccess, onCancel }: ImportPraticaFormProp
           </div>
         )}
 
+        {/* ── DATA EMISSIONE CERTIFICATO (tra Verifica e Completamento) ── */}
+        {isCompletata && (
+          <div>
+            <SectionLabel>Emissione Certificato</SectionLabel>
+            <div>
+              <Label className="text-sm font-medium mb-1.5 block">
+                Data emissione certificato <span className="text-destructive">*</span>
+              </Label>
+              <Input type="date" {...register('data_emissione_certificato')} />
+              {errors.data_emissione_certificato && (
+                <p className="text-xs text-destructive mt-1">{errors.data_emissione_certificato.message}</p>
+              )}
+              <p className="text-xs text-muted-foreground mt-1">
+                Base per il calcolo della sorveglianza (+365gg, +1095gg per SA 8000)
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* ── BRANCH COMPLETATA: data completamento + certificato ── */}
         {isCompletata && (
           <div>
@@ -716,15 +771,9 @@ export function ImportPraticaForm({ onSuccess, onCancel }: ImportPraticaFormProp
                 </div>
               )}
 
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <Label className="text-sm font-medium mb-1.5 block">Numero certificato</Label>
-                  <Input placeholder="Es. CERT-001/25" {...register('numero_certificato')} />
-                </div>
-                <div>
-                  <Label className="text-sm font-medium mb-1.5 block">Data emissione cert.</Label>
-                  <Input type="date" {...register('data_emissione_certificato')} />
-                </div>
+              <div>
+                <Label className="text-sm font-medium mb-1.5 block">Numero certificato</Label>
+                <Input placeholder="Es. CERT-001/25" {...register('numero_certificato')} />
               </div>
             </div>
           </div>

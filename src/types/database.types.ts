@@ -12,31 +12,6 @@ export type Database = {
   __InternalSupabase: {
     PostgrestVersion: "14.4"
   }
-  graphql_public: {
-    Tables: {
-      [_ in never]: never
-    }
-    Views: {
-      [_ in never]: never
-    }
-    Functions: {
-      graphql: {
-        Args: {
-          extensions?: Json
-          operationName?: string
-          query?: string
-          variables?: Json
-        }
-        Returns: Json
-      }
-    }
-    Enums: {
-      [_ in never]: never
-    }
-    CompositeTypes: {
-      [_ in never]: never
-    }
-  }
   public: {
     Tables: {
       allegati: {
@@ -165,6 +140,7 @@ export type Database = {
           id: string
           indirizzo: string | null
           nome: string
+          nota_archiviazione: string | null
           note: string | null
           numero_dipendenti: number | null
           pec: string | null
@@ -186,6 +162,7 @@ export type Database = {
           id?: string
           indirizzo?: string | null
           nome: string
+          nota_archiviazione?: string | null
           note?: string | null
           numero_dipendenti?: number | null
           pec?: string | null
@@ -207,6 +184,7 @@ export type Database = {
           id?: string
           indirizzo?: string | null
           nome?: string
+          nota_archiviazione?: string | null
           note?: string | null
           numero_dipendenti?: number | null
           pec?: string | null
@@ -235,6 +213,7 @@ export type Database = {
           email: string | null
           id: string
           nome: string
+          nota_archiviazione: string | null
           note: string | null
           telefono: string | null
         }
@@ -247,6 +226,7 @@ export type Database = {
           email?: string | null
           id?: string
           nome: string
+          nota_archiviazione?: string | null
           note?: string | null
           telefono?: string | null
         }
@@ -259,6 +239,7 @@ export type Database = {
           email?: string | null
           id?: string
           nome?: string
+          nota_archiviazione?: string | null
           note?: string | null
           telefono?: string | null
         }
@@ -522,7 +503,9 @@ export type Database = {
           data_verifica: string | null
           documenti_ricevuti: boolean | null
           documenti_ricevuti_at: string | null
+          ente_certificazione: Database["public"]["Enums"]["ente_certificazione_type"]
           fase: Database["public"]["Enums"]["fase_type"]
+          firme_inviate: boolean | null
           id: string
           motivo_stato: string | null
           note: string | null
@@ -565,7 +548,9 @@ export type Database = {
           data_verifica?: string | null
           documenti_ricevuti?: boolean | null
           documenti_ricevuti_at?: string | null
+          ente_certificazione?: Database["public"]["Enums"]["ente_certificazione_type"]
           fase?: Database["public"]["Enums"]["fase_type"]
+          firme_inviate?: boolean | null
           id?: string
           motivo_stato?: string | null
           note?: string | null
@@ -608,7 +593,9 @@ export type Database = {
           data_verifica?: string | null
           documenti_ricevuti?: boolean | null
           documenti_ricevuti_at?: string | null
+          ente_certificazione?: Database["public"]["Enums"]["ente_certificazione_type"]
           fase?: Database["public"]["Enums"]["fase_type"]
+          firme_inviate?: boolean | null
           id?: string
           motivo_stato?: string | null
           note?: string | null
@@ -971,7 +958,9 @@ export type Database = {
           data_verifica: string | null
           documenti_ricevuti: boolean | null
           documenti_ricevuti_at: string | null
+          ente_certificazione: Database["public"]["Enums"]["ente_certificazione_type"]
           fase: Database["public"]["Enums"]["fase_type"]
+          firme_inviate: boolean | null
           id: string
           motivo_stato: string | null
           note: string | null
@@ -1018,12 +1007,14 @@ export type Database = {
         | "follow_up_review"
         | "ricertificazione_30m"
       contatto_type: "consulente" | "diretto"
+      ente_certificazione_type: "ESQ" | "CERTIS"
       fase_type:
         | "contratto_firmato"
         | "programmazione_verifica"
         | "richiesta_proforma"
         | "elaborazione_pratica"
         | "firme"
+        | "invio_firme"
         | "completata"
       messaggio_tipo: "commento" | "richiesta" | "risposta" | "sistema"
       notifica_tipo:
@@ -1160,9 +1151,6 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
-  graphql_public: {
-    Enums: {},
-  },
   public: {
     Enums: {
       ciclo_type: [
@@ -1176,12 +1164,14 @@ export const Constants = {
         "ricertificazione_30m",
       ],
       contatto_type: ["consulente", "diretto"],
+      ente_certificazione_type: ["ESQ", "CERTIS"],
       fase_type: [
         "contratto_firmato",
         "programmazione_verifica",
         "richiesta_proforma",
         "elaborazione_pratica",
         "firme",
+        "invio_firme",
         "completata",
       ],
       messaggio_tipo: ["commento", "richiesta", "risposta", "sistema"],

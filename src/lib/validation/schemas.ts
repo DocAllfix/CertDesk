@@ -56,7 +56,7 @@ const optCap = z.union([
 // Fasi in ordine (usato per validazione import)
 const FASI = [
   'contratto_firmato', 'programmazione_verifica',
-  'richiesta_proforma', 'elaborazione_pratica', 'firme', 'completata',
+  'richiesta_proforma', 'elaborazione_pratica', 'firme', 'invio_firme', 'completata',
 ] as const
 
 const faseEnum = z.enum(FASI)
@@ -69,6 +69,7 @@ export const praticaSchema = z.object({
     'terza_sorveglianza', 'quarta_sorveglianza', 'follow_up_review',
     'ricertificazione', 'ricertificazione_30m',
   ] as const),
+  ente_certificazione: z.enum(['ESQ', 'CERTIS'] as const),
   tipo_contatto: z.enum(['consulente', 'diretto'] as const),
 
   consulente_id:   z.string().nullable().optional(),
@@ -201,6 +202,7 @@ export const importPraticaSchema = z.object({
     'terza_sorveglianza', 'quarta_sorveglianza', 'follow_up_review',
     'ricertificazione', 'ricertificazione_30m',
   ] as const),
+  ente_certificazione: z.enum(['ESQ', 'CERTIS'] as const),
   tipo_contatto: z.enum(['consulente', 'diretto'] as const),
 
   consulente_id:   z.string().nullable().optional(),
@@ -267,6 +269,24 @@ export const importPraticaSchema = z.object({
           code: 'custom',
           message: 'La data di completamento non può essere nel futuro',
           path: ['import_completata_at'],
+        })
+      }
+    }
+    // data_emissione_certificato obbligatoria per pratiche importate già completate
+    // Usata come base per il calcolo del promemoria sorveglianza (+365/1095gg).
+    if (!d.data_emissione_certificato) {
+      ctx.addIssue({
+        code: 'custom',
+        message: 'Data emissione certificato obbligatoria per pratiche già completate (usata per calcolare la sorveglianza)',
+        path: ['data_emissione_certificato'],
+      })
+    } else {
+      const oggi = new Date().toISOString().split('T')[0]
+      if (d.data_emissione_certificato > oggi) {
+        ctx.addIssue({
+          code: 'custom',
+          message: 'La data di emissione certificato non può essere nel futuro',
+          path: ['data_emissione_certificato'],
         })
       }
     }

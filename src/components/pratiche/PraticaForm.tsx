@@ -49,7 +49,8 @@ const FASE_ORDINE: Record<FaseType, number> = {
   richiesta_proforma:     3,
   elaborazione_pratica:   4,
   firme:                  5,
-  completata:             6,
+  invio_firme:            6,
+  completata:             7,
 }
 
 const CICLO_LABELS: Record<CicloType, string> = {
@@ -121,6 +122,7 @@ export function PraticaForm({ pratica, onSuccess, onCancel }: PraticaFormProps) 
     cliente_id:   pratica?.cliente_id ?? '',
     norme:        pratica?.norme?.map(n => n.codice) ?? [],
     ciclo:        pratica?.ciclo ?? 'certificazione',
+    ente_certificazione: pratica?.ente_certificazione ?? 'ESQ',
     tipo_contatto: pratica?.tipo_contatto ?? 'consulente',
 
     consulente_id: pratica?.consulente_id ?? null,
@@ -493,6 +495,30 @@ export function PraticaForm({ pratica, onSuccess, onCancel }: PraticaFormProps) 
               />
               {errors.ciclo && (
                 <p className="text-xs text-destructive mt-1">{errors.ciclo.message}</p>
+              )}
+            </div>
+
+            <div>
+              <Label className="text-sm font-medium mb-1.5 block">
+                Ente di certificazione <span className="text-destructive">*</span>
+              </Label>
+              <Controller
+                control={control}
+                name="ente_certificazione"
+                render={({ field }) => (
+                  <Select value={field.value} onValueChange={field.onChange} disabled={gestionaleDisabled}>
+                    <SelectTrigger className={gestionaleDisabled ? 'opacity-60' : 'cursor-pointer'}>
+                      <SelectValue placeholder="Seleziona..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="ESQ">ESQ</SelectItem>
+                      <SelectItem value="CERTIS">CERTIS</SelectItem>
+                    </SelectContent>
+                  </Select>
+                )}
+              />
+              {errors.ente_certificazione && (
+                <p className="text-xs text-destructive mt-1">{errors.ente_certificazione.message}</p>
               )}
             </div>
           </div>
