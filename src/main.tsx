@@ -6,7 +6,7 @@ import { APP_CONFIG } from '@/config/app.config'
 
 // ── Sentry init (solo se DSN configurato) ───────────────────────
 const sentryDsn = import.meta.env.VITE_SENTRY_DSN
-if (sentryDsn) {
+if (sentryDsn && import.meta.env.PROD) {
   Sentry.init({
     dsn: sentryDsn,
     environment: import.meta.env.MODE,

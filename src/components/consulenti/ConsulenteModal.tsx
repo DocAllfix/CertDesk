@@ -11,7 +11,6 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { NormeMultiSelect } from '@/components/shared/NormeMultiSelect'
 import {
   useCreateConsulente,
@@ -206,14 +205,9 @@ export function ConsulenteModal({ open, onClose, consulente }: ConsulenteModalPr
               <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                 Norme gestite
               </p>
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger type="button">
-                    <Info className="w-3.5 h-3.5 text-muted-foreground" />
-                  </TooltipTrigger>
-                  <TooltipContent>Le norme per cui questo consulente segue i clienti</TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
+              <span title="Le norme per cui questo consulente segue i clienti">
+                <Info className="w-3.5 h-3.5 text-muted-foreground" />
+              </span>
             </div>
             <NormeMultiSelect value={norme} onChange={setNorme} />
           </div>
