@@ -48,18 +48,18 @@ jobs:
       # ── Write .env.production from secrets ────────────────────
       - name: Write .env.production
         run: |
-          {
-            echo "VITE_APP_NAME=${{ secrets.VITE_APP_NAME }}"
-            echo "VITE_CLIENTE_NAME=${{ secrets.VITE_CLIENTE_NAME }}"
-            echo "VITE_LOGO_URL=${{ secrets.VITE_LOGO_URL }}"
-            echo "VITE_FAVICON_URL=${{ secrets.VITE_FAVICON_URL }}"
-            echo "VITE_PRIMARY_COLOR=${{ secrets.VITE_PRIMARY_COLOR }}"
-            echo "VITE_ACCENT_COLOR=${{ secrets.VITE_ACCENT_COLOR }}"
-            echo "VITE_NORME_ABILITATE=${{ secrets.VITE_NORME_ABILITATE }}"
-            echo "VITE_SUPABASE_URL=${{ secrets.VITE_SUPABASE_URL }}"
-            echo "VITE_SUPABASE_ANON_KEY=${{ secrets.VITE_SUPABASE_ANON_KEY }}"
-            echo "VITE_SENTRY_DSN=${{ secrets.VITE_SENTRY_DSN }}"
-          } > .env.production
+          printf '%s\n' \
+            "VITE_APP_NAME=${{ secrets.VITE_APP_NAME }}" \
+            "VITE_CLIENTE_NAME=${{ secrets.VITE_CLIENTE_NAME }}" \
+            "VITE_LOGO_URL=/logo-evalis.jpg" \
+            "VITE_FAVICON_URL=/favicon.svg" \
+            "VITE_PRIMARY_COLOR=${{ secrets.VITE_PRIMARY_COLOR }}" \
+            "VITE_ACCENT_COLOR=${{ secrets.VITE_ACCENT_COLOR }}" \
+            "VITE_NORME_ABILITATE=${{ secrets.VITE_NORME_ABILITATE }}" \
+            "VITE_SUPABASE_URL=${{ secrets.VITE_SUPABASE_URL }}" \
+            "VITE_SUPABASE_ANON_KEY=${{ secrets.VITE_SUPABASE_ANON_KEY }}" \
+            "VITE_SENTRY_DSN=${{ secrets.VITE_SENTRY_DSN }}" \
+            > .env.production
 
       # ── Build ─────────────────────────────────────────────────
       - name: Build production bundle
