@@ -7,7 +7,7 @@
  * - Nessun bottone "Avanza" — il drag È l'azione
  * - Toast sonner per errori
  */
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo } from 'react'
 import { Search, Filter, Loader2 } from 'lucide-react'
 import { Input }  from '@/components/ui/input'
 import {
@@ -77,23 +77,19 @@ export default function PipelinePage() {
   const [assigneeFilter, setAssigneeFilter] = useState('all')
   const [searchQuery,    setSearchQuery]    = useState('')
 
-  const filtriQuery: FiltriPratiche = {
+  const filtriQuery: FiltriPratiche = useMemo(() => ({
     solo_attive: true,
     ...(normFilter !== 'all'     ? { norma_codice: normFilter }     : {}),
     ...(assigneeFilter !== 'all' ? { assegnato_a:  assigneeFilter } : {}),
-  }
+  }), [normFilter, assigneeFilter])
 
   const { data: rawData = [], isLoading, error } = usePratiche(filtriQuery)
 
   // ── Optimistic update: override fase locale ────────────────────
-  // La card si sposta subito; quando il server risponde e la query
-  // si aggiorna, l'override viene pulito automaticamente.
+  // La card si sposta subito. Quando il server risponde e la query
+  // si aggiorna, nel calcolo di praticheMap l'override viene
+  // ignorato perché combacia con la fase lato server (self-cleaning).
   const [faseOverrides, setFaseOverrides] = useState<Record<string, FaseType>>({})
-
-  // Pulisci override quando arrivano dati freschi dal server
-  useEffect(() => {
-    setFaseOverrides({})
-  }, [rawData])
 
   // Trasforma + filtro client-side
   const praticheRaw = rawData as unknown as PraticaListRaw[]
@@ -120,7 +116,11 @@ export default function PipelinePage() {
       map[config.fase] = []
     }
     for (const p of pratiche) {
-      const effectiveFase = faseOverrides[p.id] ?? p.fase
+      // Override valido solo finché differisce dalla fase del server:
+      // quando la mutation conferma l'avanzamento, p.fase diventa la
+      // fase target e l'override viene ignorato senza side-effect.
+      const override = faseOverrides[p.id]
+      const effectiveFase = override && override !== p.fase ? override : p.fase
       if (map[effectiveFase]) {
         map[effectiveFase].push(p)
       }
@@ -175,6 +175,12 @@ export default function PipelinePage() {
           })
         },
         onSuccess: () => {
+          // Pulisci override confermato (igiene — praticheMap lo ignora comunque)
+          setFaseOverrides(prev => {
+            const next = { ...prev }
+            delete next[draggableId]
+            return next
+          })
           const clienteNome = pratica.cliente?.nome ?? pratica.cliente?.ragione_sociale ?? ''
           toast.success(`${clienteNome} spostata a ${targetFase.replaceAll('_', ' ')}`)
         },
